@@ -124,6 +124,27 @@ public:
     return correspondences;
   }
 
+  double cost(const Eigen::Matrix4f pose, const std::vector<CorrespondenceData> correspondences)
+  {
+    double error = 0.0;
+
+    for (auto corresponence : correspondences) {
+      Eigen::Vector4f point << correspondence.source_point.x, corresponence.source_point.y,
+        corresponence.source_point.z, 1.0;
+      Eigen::Vector4f transform_point = pose * point;
+
+      auto target_point = corresponence.target_point;
+
+      const double distance =
+        (transform_point.x() - target_point.x) * (transform_point.x() - target_point.x) +
+        (transform_point.y() - target_point.y) * (transform_point.y() - target_point.y);
+
+      error += distance;
+    }
+
+    return static_cast<double>(error / correspondences.size());
+  }
+
 private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud_;
   pcl::PointCloud<pcl::PointXYZ>::Ptr target_cloud_;
@@ -131,6 +152,9 @@ private:
   pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr kd_tree_;
 
   Eigen::Matrix4f pose_;
+
+  // parameter
+  double error_thoreshold_correspondence_;
 };
 
 }  // namespace registration
