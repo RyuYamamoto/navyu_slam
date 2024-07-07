@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>navyu_slam</name>
+  <version>0.0.0</version>
+  <description>The navyu_slam package</description>
+
+  <maintainer email="ryu.yamamoto@tier4.jp">RyuYamamoto</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>pcl_ros</depend>
+  <depend>tf2</depend>
+  <depend>tf2_eigen</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
