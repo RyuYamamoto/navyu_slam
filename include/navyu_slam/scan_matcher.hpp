@@ -25,7 +25,7 @@ class ScanMatcher : public rclcpp::Node
 {
 public:
   ScanMatcher();
-  ~ScanMatcher();
+  ~ScanMatcher() = default;
 
   void laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg);
 

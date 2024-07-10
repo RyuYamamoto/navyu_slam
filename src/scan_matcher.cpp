@@ -26,5 +26,11 @@ void ScanMatcher::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedP
 
 int main(int argc, char ** argv)
 {
+  rclcpp::init(argc, argv);
+
+  rclcpp::spin(std::make_shared<ScanMatcher>());
+
+  rclcpp::shutdown();
+
   return 0;
 }

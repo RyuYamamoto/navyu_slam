@@ -41,8 +41,8 @@ class Icp
 public:
   Icp()
   {
-    input_cloud_.reset(new PointSourceCloudPtr);
-    target_cloud_.reset(new PointTargetCloudPtr);
+    input_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    target_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
     pose_ = Eigen::Matrix4f::Identity();
   }
@@ -70,11 +70,9 @@ public:
     pcl::PointCloud<pcl::PointXYZ>::Ptr transform_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     transform_point_cloud(input_cloud_, transform_cloud, pose_);
 
-    std::vector<CorrespondenceData> correspondences;
-
     while (true) {
-      correspondences = find_correspoindence(transform_cloud);
-      if (correspondences.empty()) {
+      correspondences_ = find_correspoindence(transform_cloud);
+      if (correspondences_.empty()) {
         std::cerr << "Can not find correspondence." << std::endl;
         return;
       }
@@ -98,6 +96,16 @@ public:
     }
   }
 
+  Eigen::VectorXf convert_matrix_to_vector(const Eigen::Matrix4f matrix)
+  {
+    Eigen::VectorXf vector = Eigen::VectorXf::Zero(6);
+
+    const Eigen::Vector3f translation = matrix.block<3, 1>(0, 3).cast<float>();
+    const Eigen::Quaternionf quaternion(matrix.block<3, 3>(0, 0).cast<float>());
+
+    Eigen::Vector3f rotation;
+  }
+
   std::vector<CorrespondenceData> find_correspoindence(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
   {
@@ -114,8 +122,6 @@ public:
         CorrespondenceData correspondence;
         correspondence.source_point = cloud->points[i];
         correspondence.target_point = target_cloud_->points[indices[0]];
-        correspondence.source_index = i;
-        correspondence.target_index = indices[0];
 
         correspondences.emplace_back(correspondence);
       }
@@ -124,12 +130,13 @@ public:
     return correspondences;
   }
 
-  double cost(const Eigen::Matrix4f pose, const std::vector<CorrespondenceData> correspondences)
+  double cost(const Eigen::Matrix4f pose)
   {
     double error = 0.0;
 
-    for (auto corresponence : correspondences) {
-      Eigen::Vector4f point << correspondence.source_point.x, corresponence.source_point.y,
+    for (auto corresponence : correspondences_) {
+      Eigen::Vector4f point;
+      point << corresponence.source_point.x, corresponence.source_point.y,
         corresponence.source_point.z, 1.0;
       Eigen::Vector4f transform_point = pose * point;
 
@@ -142,12 +149,22 @@ public:
       error += distance;
     }
 
-    return static_cast<double>(error / correspondences.size());
+    return static_cast<double>(error / correspondences_.size()) * cost_scaling_;
+  }
+
+  Eigen::Matrix4f optimize(Eigen::Matrix4f initial_pose)
+  {
+    Eigen::VectorXf pose = convert_matrix_to_vector(initial_pose);
+
+    while (true) {
+    }
   }
 
 private:
   pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud_;
   pcl::PointCloud<pcl::PointXYZ>::Ptr target_cloud_;
+
+  std::vector<CorrespondenceData> correspondences_;
 
   pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr kd_tree_;
 
@@ -155,6 +172,8 @@ private:
 
   // parameter
   double error_thoreshold_correspondence_;
+  double cost_scaling_;
+  double partial_derivative_coeff_;
 };
 
 }  // namespace registration
