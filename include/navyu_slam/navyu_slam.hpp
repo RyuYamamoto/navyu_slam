@@ -22,6 +22,7 @@
 
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <nav_msgs/msg/occupancy_grid.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 
 #include <pcl/point_cloud.h>
@@ -30,6 +31,14 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
+
+struct SubMap
+{
+  Eigen::Matrix4f pose;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr scan;
+  int id;
+  double accumulate_distance;
+};
 
 class NavyuSLAM : public rclcpp::Node
 {
@@ -44,9 +53,11 @@ private:
   bool get_transform(
     const std::string target_frame, const std::string source_frame,
     geometry_msgs::msg::TransformStamped & frame);
+  void bresenham(int x0, int y0, int x1, int y1, nav_msgs::msg::OccupancyGrid & grid_map);
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_subscriber_;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr map_publisher_;
 
   laser_geometry::LaserProjection projection_;
 
@@ -56,6 +67,16 @@ private:
 
   std::string odom_frame_id_;
   std::string robot_frame_id_;
+  double displacement_;
+
+  nav_msgs::msg::OccupancyGrid map_;
+
+  Eigen::Matrix4f previous_odom_pose_;
+
+  Eigen::Vector2f min_;
+  Eigen::Vector2f max_;
+
+  std::vector<pcl::PointCloud<pcl::PointXYZ>> scan_data_;
 };
 
 #endif

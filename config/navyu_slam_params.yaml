@@ -1,0 +1,6 @@
+navyu_slam_node:
+  ros__parameters:
+    resolution: 0.05
+    odom_frame_id: odom
+    robot_frame_id: base_link
+    displacement: 1.0
