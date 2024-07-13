@@ -34,7 +34,7 @@ def generate_launch_description():
                 name="navyu_slam_node",
                 output="screen",
                 parameters=[navyu_slam_config],
-                remappings=[("/scan", "/scanner1")]
+                #remappings=[("/scan", "/scanner1")]
             ),
         ]
     )

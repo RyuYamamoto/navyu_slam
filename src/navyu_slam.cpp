@@ -35,7 +35,8 @@ NavyuSLAM::NavyuSLAM()
   map_.info.origin.position.x = -static_cast<double>(map_.info.width * map_.info.resolution) / 2.0;
   map_.info.origin.position.y = -static_cast<double>(map_.info.height * map_.info.resolution) / 2.0;
   map_.data.resize(map_.info.height * map_.info.width);
-  for (int idx = 0; idx < map_.data.size(); idx++) map_.data[idx] = 50;
+  map_value_.resize(map_.info.height * map_.info.width);
+  for (int idx = 0; idx < map_.data.size(); idx++) map_value_[idx] = 0.5;
 }
 
 void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
@@ -96,24 +97,21 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
     else if (max_[1] < point.y)
       max_[1] = point.y;
   }
-  // map_.info.width = std::ceil((max_[0] - min_[0]) / map_.info.resolution);
-  // map_.info.height = std::ceil((max_[1] - min_[1]) / map_.info.resolution);
-  // map_.info.origin.position.x = min_[0];
-  // map_.info.origin.position.y = min_[1];
-  // map_.data.resize(map_.info.width * map_.info.height);
 
   for (auto & point : odom_to_laser_cloud->points) {
     const int ix = static_cast<int>((point.x - map_.info.origin.position.x) / map_.info.resolution);
     const int iy = static_cast<int>((point.y - map_.info.origin.position.y) / map_.info.resolution);
-    if (0 <= ix and ix < map_.info.width and 0 <= iy and iy < map_.info.height) {
-      int index = ix + map_.info.width * iy;
-      map_.data[index] = 100;
-    }
+
     const int ox =
       static_cast<int>((current_position[0] - map_.info.origin.position.x) / map_.info.resolution);
     const int oy =
       static_cast<int>((current_position[1] - map_.info.origin.position.y) / map_.info.resolution);
     bresenham(ox, oy, ix, iy, map_);
+    if (0 <= ix and ix < map_.info.width and 0 <= iy and iy < map_.info.height) {
+      int index = ix + map_.info.width * iy;
+      map_.data[map_.info.width * iy + ix] +=
+        (1.0 - (1.0 / (1.0 + std::exp(std::log(0.8 / 0.2))))) * 100.0;
+    }
   }
 
   map_.header.frame_id = odom_frame_id_;
@@ -124,34 +122,25 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
 void NavyuSLAM::bresenham(int x0, int y0, int x1, int y1, nav_msgs::msg::OccupancyGrid & grid_map)
 {
   int dx = std::abs(x1 - x0);
-  int dy = -std::abs(y1 - y0);
+  int dy = std::abs(y1 - y0);
   int sx = x0 < x1 ? 1 : -1;
   int sy = y0 < y1 ? 1 : -1;
-  int error = dx + dy;
+  int err = (dx > dy ? dx : -dy) / 2;
+  grid_map.data[grid_map.info.width * y0 + x0] +=
+    (1.0 - (1.0 / (1.0 + std::exp(std::log(0.2 / 0.8))))) * 100.0;
 
-  while (true) {
-    if (x0 == x1 and y0 == y1) {
-      break;
-    }
-    // if (0 <= x0 and x0 < map_.info.width and 0 <= y0 and y0 < map_.info.height) return;
-    int index = grid_map.data[grid_map.info.width * y0 + x0];
-    grid_map.data[grid_map.info.width * y0 + x0] = 0;
-    if (2 * error >= dy) {
-      if (x0 == x1) {
-        grid_map.data[index] = 0;
-        break;
-      }
-      error += dy;
+  while (x0 != x1 || y0 != y1) {
+    int err2 = err;
+    if (err2 > -dx) {
+      err -= dy;
       x0 += sx;
     }
-    if (2 * error <= dx) {
-      if (y0 == y1) {
-        grid_map.data[index] = 0;
-        break;
-      }
-      error += dx;
+    if (err2 < dy) {
+      err += dx;
       y0 += sy;
     }
+    grid_map.data[grid_map.info.width * y0 + x0] +=
+      (1.0 - (1.0 / (1.0 + std::exp(std::log(0.2 / 0.8))))) * 100.0;
   }
 }
 

@@ -34,6 +34,7 @@
 
 struct SubMap
 {
+  std_msgs::msg::Header header;
   Eigen::Matrix4f pose;
   pcl::PointCloud<pcl::PointXYZ>::Ptr scan;
   int id;
@@ -54,6 +55,7 @@ private:
     const std::string target_frame, const std::string source_frame,
     geometry_msgs::msg::TransformStamped & frame);
   void bresenham(int x0, int y0, int x1, int y1, nav_msgs::msg::OccupancyGrid & grid_map);
+  void bresenham1(int x0, int y0, int x1, int y1, nav_msgs::msg::OccupancyGrid & grid_map);
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_subscriber_;
@@ -70,13 +72,14 @@ private:
   double displacement_;
 
   nav_msgs::msg::OccupancyGrid map_;
+  std::vector<int> map_value_;
 
   Eigen::Matrix4f previous_odom_pose_;
 
   Eigen::Vector2f min_;
   Eigen::Vector2f max_;
 
-  std::vector<pcl::PointCloud<pcl::PointXYZ>> scan_data_;
+  std::vector<SubMap> sub_map_;
 };
 
 #endif
