@@ -15,6 +15,9 @@
 #ifndef NAVYU_SLAM__NAVYU_SLAM_HPP_
 #define NAVYU_SLAM__NAVYU_SLAM_HPP_
 
+#include "navyu_slam/occupancy_grid_map.hpp"
+#include "navyu_slam/submap.hpp"
+
 #include <laser_geometry/laser_geometry.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -32,15 +35,6 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
-struct SubMap
-{
-  std_msgs::msg::Header header;
-  Eigen::Matrix4f pose;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr scan;
-  int id;
-  double accumulate_distance;
-};
-
 class NavyuSLAM : public rclcpp::Node
 {
 public:
@@ -54,12 +48,16 @@ private:
   bool get_transform(
     const std::string target_frame, const std::string source_frame,
     geometry_msgs::msg::TransformStamped & frame);
-  void bresenham(int x0, int y0, int x1, int y1, nav_msgs::msg::OccupancyGrid & grid_map);
-  void bresenham1(int x0, int y0, int x1, int y1, nav_msgs::msg::OccupancyGrid & grid_map);
+  void bresenham(int x0, int y0, int x1, int y1, std::vector<int> & grid_map);
+
+  inline double log_odds(double p) { return std::log(p / (1.0 - p)); }
+  inline double probability(double odds) { return 1.0 - (1.0 / (1.0 + std::exp(odds))); }
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_subscriber_;
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr map_publisher_;
+
+  std::shared_ptr<OccupancyGridMap> grid_map_;
 
   laser_geometry::LaserProjection projection_;
 
@@ -80,6 +78,13 @@ private:
   Eigen::Vector2f max_;
 
   std::vector<SubMap> sub_map_;
+
+  double resolution_;
+  int width_;
+  int height_;
+
+  double probability_occ_;
+  double probability_free_;
 };
 
 #endif

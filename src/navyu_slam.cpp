@@ -28,7 +28,11 @@ NavyuSLAM::NavyuSLAM()
   odom_frame_id_ = declare_parameter<std::string>("odom_frame_id");
   robot_frame_id_ = declare_parameter<std::string>("robot_frame_id");
   displacement_ = declare_parameter<double>("displacement");
+  probability_free_ = declare_parameter<double>("probability_free");
+  probability_occ_ = declare_parameter<double>("probability_occ");
 
+  width_ = 4000;
+  height_ = 4000;
   map_.info.height = 4000;
   map_.info.width = 4000;
   map_.info.resolution = declare_parameter<double>("resolution");
@@ -37,6 +41,9 @@ NavyuSLAM::NavyuSLAM()
   map_.data.resize(map_.info.height * map_.info.width);
   map_value_.resize(map_.info.height * map_.info.width);
   for (int idx = 0; idx < map_.data.size(); idx++) map_value_[idx] = 0.5;
+
+  grid_map_ = std::make_shared<OccupancyGridMap>(
+    width_, height_, resolution_, probability_occ_, probability_free_);
 }
 
 void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
@@ -98,6 +105,12 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
       max_[1] = point.y;
   }
 
+  SubMap submap(laser_cloud, odom_to_robot, delta);
+  submap.transform_point_cloud(odom_to_robot * robot_to_laser);
+  sub_map_.emplace_back(submap);
+
+  // grid_map_->update(submap);
+#if 1
   for (auto & point : odom_to_laser_cloud->points) {
     const int ix = static_cast<int>((point.x - map_.info.origin.position.x) / map_.info.resolution);
     const int iy = static_cast<int>((point.y - map_.info.origin.position.y) / map_.info.resolution);
@@ -106,30 +119,30 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
       static_cast<int>((current_position[0] - map_.info.origin.position.x) / map_.info.resolution);
     const int oy =
       static_cast<int>((current_position[1] - map_.info.origin.position.y) / map_.info.resolution);
-    bresenham(ox, oy, ix, iy, map_);
-    if (0 <= ix and ix < map_.info.width and 0 <= iy and iy < map_.info.height) {
-      int index = ix + map_.info.width * iy;
-      map_.data[map_.info.width * iy + ix] +=
-        (1.0 - (1.0 / (1.0 + std::exp(std::log(0.8 / 0.2))))) * 100.0;
-    }
+    bresenham(ox, oy, ix, iy, map_value_);
+    if (0 <= ix and ix < map_.info.width and 0 <= iy and iy < map_.info.height)
+      map_value_[map_.info.width * iy + ix] += log_odds(probability_occ_);
   }
+#endif
+  for (int i = 0; i < map_value_.size(); i++) map_.data[i] = probability(map_value_[i]) * 100.0;
 
   map_.header.frame_id = odom_frame_id_;
   map_.header.stamp = now();
+  // map_.data = grid_map_->get_map_with_probability();
   map_publisher_->publish(map_);
 }
 
-void NavyuSLAM::bresenham(int x0, int y0, int x1, int y1, nav_msgs::msg::OccupancyGrid & grid_map)
+void NavyuSLAM::bresenham(int x0, int y0, int x1, int y1, std::vector<int> & grid_map)
 {
   int dx = std::abs(x1 - x0);
   int dy = std::abs(y1 - y0);
   int sx = x0 < x1 ? 1 : -1;
   int sy = y0 < y1 ? 1 : -1;
   int err = (dx > dy ? dx : -dy) / 2;
-  grid_map.data[grid_map.info.width * y0 + x0] +=
-    (1.0 - (1.0 / (1.0 + std::exp(std::log(0.2 / 0.8))))) * 100.0;
 
-  while (x0 != x1 || y0 != y1) {
+  while (true) {
+    if (x0 == x1 && y0 == y1) break;
+    grid_map[width_ * y0 + x0] += log_odds(probability_free_);
     int err2 = err;
     if (err2 > -dx) {
       err -= dy;
@@ -139,8 +152,6 @@ void NavyuSLAM::bresenham(int x0, int y0, int x1, int y1, nav_msgs::msg::Occupan
       err += dx;
       y0 += sy;
     }
-    grid_map.data[grid_map.info.width * y0 + x0] +=
-      (1.0 - (1.0 / (1.0 + std::exp(std::log(0.2 / 0.8))))) * 100.0;
   }
 }
 

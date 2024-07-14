@@ -21,6 +21,7 @@ ament_auto_add_executable(scan_matcher_node
 
 ament_auto_add_executable(navyu_slam_node
   src/navyu_slam.cpp
+  src/occupancy_grid_map.cpp
 )
 add_backward(navyu_slam_node)
 

@@ -4,3 +4,5 @@ navyu_slam_node:
     odom_frame_id: odom
     robot_frame_id: base_link
     displacement: 0.3
+    probability_occ: 0.8
+    probability_free: 0.2
