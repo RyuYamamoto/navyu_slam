@@ -48,10 +48,6 @@ private:
   bool get_transform(
     const std::string target_frame, const std::string source_frame,
     geometry_msgs::msg::TransformStamped & frame);
-  void bresenham(int x0, int y0, int x1, int y1, std::vector<int> & grid_map);
-
-  inline double log_odds(double p) { return std::log(p / (1.0 - p)); }
-  inline double probability(double odds) { return 1.0 - (1.0 / (1.0 + std::exp(odds))); }
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_subscriber_;
@@ -68,9 +64,6 @@ private:
   std::string odom_frame_id_;
   std::string robot_frame_id_;
   double displacement_;
-
-  nav_msgs::msg::OccupancyGrid map_;
-  std::vector<int> map_value_;
 
   Eigen::Matrix4f previous_odom_pose_;
 

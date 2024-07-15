@@ -11,7 +11,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-find_package(backward_ros REQUIRED)
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
@@ -23,7 +22,6 @@ ament_auto_add_executable(navyu_slam_node
   src/navyu_slam.cpp
   src/occupancy_grid_map.cpp
 )
-add_backward(navyu_slam_node)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

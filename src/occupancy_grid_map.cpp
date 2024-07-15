@@ -25,7 +25,7 @@ OccupancyGridMap::OccupancyGridMap(
   max_(std::numeric_limits<float>::min(), std::numeric_limits<float>::min())
 {
   map_value_.resize(width_ * height_);
-  for (int i = 0; i < map_value_.size(); i++) map_value_[i] = 0.5;
+  for (int i = 0; i < map_value_.size(); i++) map_value_[i] = log_odds(0.5);
 }
 
 void OccupancyGridMap::update(SubMap submap)
@@ -33,38 +33,31 @@ void OccupancyGridMap::update(SubMap submap)
   auto scan = submap.get_scan();
   auto origin = submap.get_origin();
   // get map index from robot pose
-  auto [sx, sy] = get_map_idx(origin[0], origin[1]);
+  auto [sx, sy] = get_grid_map_coord(origin[0], origin[1]);
 
-  for (auto point : scan->points) {
+  for (auto & point : scan->points) {
     // get map index from scan point
-    auto [hx, hy] = get_map_idx(point.x, point.y);
-    bresenham(sx, sy, hx, hy, map_value_);
-    // occ cell
-    if (is_inside(hx, hy)) map_value_[width_ * hy + hx] += log_odds(probability_occ_);
+    auto [hx, hy] = get_grid_map_coord(point.x, point.y);
+
+    std::vector<Eigen::Vector2i> cell;
+    bresenham(sx, sy, hx, hy, cell);
+
+    // free cell
+    for (int i = 0; i < cell.size(); i++)
+      map_value_[get_index(cell[i][0], cell[i][1])] += log_odds(probability_free_);
+
+    if (is_inside(hx, hy)) map_value_[get_index(hx, hy)] += log_odds(probability_occ_);
   }
 }
 
 void OccupancyGridMap::generate(std::vector<SubMap> submap)
 {
   map_value_.clear();
-
-  for (auto map : submap) {
-    auto scan = map.get_scan();
-    auto origin = map.get_origin();
-    // get map index from robot pose
-    auto [sx, sy] = get_map_idx(origin[0], origin[1]);
-
-    for (auto point : scan->points) {
-      // get map index from scan point
-      auto [hx, hy] = get_map_idx(point.x, point.y);
-      bresenham(sx, sy, hx, hy, map_value_);
-      // occ cell
-      if (is_inside(hx, hy)) map_value_[width_ * hy + hx] += log_odds(probability_occ_);
-    }
-  }
+  for (auto map : submap) update(map);
 }
 
-void OccupancyGridMap::bresenham(int x0, int y0, int x1, int y1, std::vector<int8_t> & map)
+void OccupancyGridMap::bresenham(
+  int x0, int y0, int x1, int y1, std::vector<Eigen::Vector2i> & cell)
 {
   int dx = std::abs(x1 - x0);
   int dy = std::abs(y1 - y0);
@@ -74,7 +67,7 @@ void OccupancyGridMap::bresenham(int x0, int y0, int x1, int y1, std::vector<int
 
   while (true) {
     if (x0 == x1 && y0 == y1) break;
-    map[width_ * y0 + x0] += log_odds(probability_free_);
+    cell.emplace_back(Eigen::Vector2i(x0, y0));
     int err2 = err;
     if (err2 > -dx) {
       err -= dy;

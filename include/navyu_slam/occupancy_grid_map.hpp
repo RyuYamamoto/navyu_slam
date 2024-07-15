@@ -28,9 +28,11 @@ public:
     int width, int height, double resolution, double probability_occ, double probability_free);
   ~OccupancyGridMap() = default;
 
+  void set_origin(Eigen::Vector3f origin) { origin_ = origin; }
+
   void update(SubMap submap);
   void generate(std::vector<SubMap> submap);
-  inline std::vector<int8_t> get_map() { return map_value_; }
+  inline std::vector<int> get_map() { return map_value_; }
   inline std::vector<int8_t> get_map_with_probability()
   {
     std::vector<int8_t> map_with_probability;
@@ -46,20 +48,21 @@ public:
     bool ret = (0 <= mx and mx < width_) and (0 <= my and my < height_) ? true : false;
     return ret;
   }
-  std::tuple<int, int> get_map_idx(const double wx, const double wy)
+  std::tuple<int, int> get_grid_map_coord(const double wx, const double wy)
   {
     int mx = static_cast<int>((wx - origin_[0]) / resolution_);
     int my = static_cast<int>((wy - origin_[1]) / resolution_);
     return std::make_tuple(mx, my);
   }
+  inline int get_index(int ix, int iy) { return width_ * iy + ix; }
 
 private:
-  void bresenham(int x0, int y0, int x1, int y1, std::vector<int8_t> & map);
-  inline double log_odds(double p) { return std::log(1.0 / (1.0 - p)); }
+  void bresenham(int x0, int y0, int x1, int y1, std::vector<Eigen::Vector2i> & cell);
+  inline double log_odds(double p) { return std::log(p / (1.0 - p)); }
   inline double probability(double odds) { return 1.0 - (1.0 / (1.0 + std::exp(odds))); }
 
 private:
-  std::vector<int8_t> map_value_;
+  std::vector<int> map_value_;
 
   int width_;
   int height_;
@@ -67,7 +70,7 @@ private:
   double probability_free_;
   double probability_occ_;
 
-  Eigen::Vector2f origin_;
+  Eigen::Vector3f origin_;
   Eigen::Vector2f min_;
   Eigen::Vector2f max_;
 };
