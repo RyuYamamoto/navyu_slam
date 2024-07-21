@@ -3,8 +3,8 @@ navyu_slam_node:
     width: 4000
     height: 4000
     resolution: 0.05
-    odom_frame_id: odom
+    odom_frame_id: map
     robot_frame_id: base_link
-    displacement: 0.1
+    displacement: 1.0
     probability_occ: 0.9
     probability_free: 0.25

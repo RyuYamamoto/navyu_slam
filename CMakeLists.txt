@@ -11,6 +11,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+find_package(backward_ros REQUIRED)
+find_package(OpenMP REQUIRED)
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
@@ -21,6 +23,13 @@ ament_auto_add_executable(scan_matcher_node
 ament_auto_add_executable(navyu_slam_node
   src/navyu_slam.cpp
   src/occupancy_grid_map.cpp
+)
+
+add_backward(scan_matcher_node)
+
+target_link_libraries(scan_matcher_node
+  OpenMP::OpenMP_CXX
+  rclcpp::rclcpp
 )
 
 if(BUILD_TESTING)

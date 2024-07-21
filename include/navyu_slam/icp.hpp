@@ -17,7 +17,9 @@
 
 #include <Eigen/Core>
 #include <pcl/impl/point_types.hpp>
+#include <pcl_ros/transforms.hpp>
 
+#include <omp.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -43,16 +45,22 @@ public:
   {
     input_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
     target_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    kd_tree_.reset(new pcl::KdTreeFLANN<pcl::PointXYZ>);
 
-    pose_ = Eigen::Matrix4f::Identity();
+    transformation_ = Eigen::Matrix4f::Identity();
+
+    epsilon_ = std::numeric_limits<float>::epsilon();
   }
   ~Icp() = default;
+
+  void set_max_iteration(int max_iteration) { max_iteration_ = max_iteration; }
 
   void set_input_cloud(const PointSourceCloudPtr input_cloud) { input_cloud_ = input_cloud; }
   void set_target_cloud(const PointTargetCloudPtr target_cloud)
   {
     if (target_cloud->points.empty()) return;
     target_cloud_ = target_cloud;
+    kd_tree_->setInputCloud(target_cloud_);
   }
   void align(Eigen::Matrix4f initial_pose)
   {
@@ -64,20 +72,27 @@ public:
       std::cerr << "target cloud is not set." << std::endl;
       return;
     }
+    transformation_ = initial_pose;
 
-    pose_ = initial_pose;
-
-    pcl::PointCloud<pcl::PointXYZ>::Ptr transform_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    transform_point_cloud(input_cloud_, transform_cloud, pose_);
-
+    int iteration = 1;
     while (true) {
-      correspondences_ = find_correspoindence(transform_cloud);
+      if (100 < iteration) break;
+      correspondences_ = find_correspoindence(input_cloud_, transformation_);
       if (correspondences_.empty()) {
         std::cerr << "Can not find correspondence." << std::endl;
         return;
       }
+
+      Eigen::Matrix4f optimize_pose(Eigen::Matrix4f::Identity());
+      transform(optimize_pose);
+      transformation_ = optimize_pose * transformation_;
+
+      if (optimize_pose.squaredNorm() < epsilon_) break;
+      iteration++;
     }
   }
+
+  Eigen::Matrix4f get_transformation() { return transformation_; }
 
   void transform_point_cloud(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in,
@@ -96,68 +111,100 @@ public:
     }
   }
 
-  Eigen::VectorXf convert_matrix_to_vector(const Eigen::Matrix4f matrix)
-  {
-    Eigen::VectorXf vector = Eigen::VectorXf::Zero(6);
-
-    const Eigen::Vector3f translation = matrix.block<3, 1>(0, 3).cast<float>();
-    const Eigen::Quaternionf quaternion(matrix.block<3, 3>(0, 0).cast<float>());
-
-    Eigen::Vector3f rotation;
-  }
-
   std::vector<CorrespondenceData> find_correspoindence(
-    const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::Matrix4f pose)
   {
     std::vector<CorrespondenceData> correspondences;
+    correspondences.resize(cloud->size());
 
-    kd_tree_->setInputCloud(target_cloud_);
-
+    std::vector<float> dist(1);
+    std::vector<int> indices(1);
     for (int i = 0; i < cloud->points.size(); i++) {
-      std::vector<int> indices(1);
-      std::vector<float> dist(1);
+      pcl::PointXYZ transform_point;
+      transform_point.getVector4fMap() = pose * cloud->points[i].getVector4fMap();
 
-      int ret = kd_tree_->nearestKSearch(cloud->points[i], 1, indices, dist);
-      if (0 < ret) {
+      int ret = kd_tree_->nearestKSearch(transform_point, 1, indices, dist);
+
+      if (0 < ret && dist[0] < correspondence_distance_ * correspondence_distance_) {
         CorrespondenceData correspondence;
-        correspondence.source_point = cloud->points[i];
+        correspondence.source_point = transform_point;
         correspondence.target_point = target_cloud_->points[indices[0]];
-
-        correspondences.emplace_back(correspondence);
+        correspondences[i] = correspondence;
       }
     }
 
     return correspondences;
   }
 
-  double cost(const Eigen::Matrix4f pose)
+  Eigen::Vector4f cetroid(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in)
   {
-    double error = 0.0;
+    Eigen::Vector4f centroid(Eigen::Vector4f::Zero());
 
-    for (auto corresponence : correspondences_) {
-      Eigen::Vector4f point;
-      point << corresponence.source_point.x, corresponence.source_point.y,
-        corresponence.source_point.z, 1.0;
-      Eigen::Vector4f transform_point = pose * point;
-
-      auto target_point = corresponence.target_point;
-
-      const double distance =
-        (transform_point.x() - target_point.x) * (transform_point.x() - target_point.x) +
-        (transform_point.y() - target_point.y) * (transform_point.y() - target_point.y);
-
-      error += distance;
+    for (int i = 0; i < cloud_in->points.size(); i++) {
+      cetroid[0] += cloud_in->points[i].x;
+      cetroid[1] += cloud_in->points[i].y;
+      cetroid[2] += cloud_in->points[i].z;
     }
+    centroid /= cloud_in->points.size();
+    centroid[3] = 1;
 
-    return static_cast<double>(error / correspondences_.size()) * cost_scaling_;
+    return centroid;
   }
 
-  Eigen::Matrix4f optimize(Eigen::Matrix4f initial_pose)
+  void transform_centroid(
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in, const Eigen::Vector4f centroid,
+    pcl::PointCloud<pcl::PointXYZ>::Ptr & cloud_out)
   {
-    Eigen::VectorXf pose = convert_matrix_to_vector(initial_pose);
+    cloud_out->resize(cloud_in->size());
 
-    while (true) {
+    for (int i = 0; i < cloud_in->points.size(); i++) {
+      cloud_out->points[i].x = cloud_in->points[i].x - centroid[0];
+      cloud_out->points[i].y = cloud_in->points[i].y - centroid[1];
+      cloud_out->points[i].z = cloud_in->points[i].z - centroid[2];
     }
+  }
+
+  void transform(Eigen::Matrix4f & transformation)
+  {
+    Eigen::Vector4f src_centroid(Eigen::Vector4f::Zero());
+    Eigen::Vector4f tgt_centroid(Eigen::Vector4f::Zero());
+
+    for (auto correspondence : correspondences_) {
+      auto src_point = correspondence.source_point;
+      auto tgt_point = correspondence.target_point;
+
+      src_centroid += src_point.getVector4fMap();
+      tgt_centroid += tgt_point.getVector4fMap();
+    }
+
+    src_centroid /= correspondences_.size();
+    src_centroid[3] = 1.0;
+    tgt_centroid /= correspondences_.size();
+    tgt_centroid[3] = 1.0;
+
+    Eigen::Matrix3f H(Eigen::Matrix3f::Zero());
+    for (auto correspondence : correspondences_) {
+      auto src_point = correspondence.source_point;
+      auto tgt_point = correspondence.target_point;
+
+      Eigen::Vector3f A, B;
+      A[0] = src_point.x - src_centroid[0];
+      A[1] = src_point.y - src_centroid[1];
+      A[2] = src_point.z - src_centroid[2];
+
+      B[0] = tgt_point.x - tgt_centroid[0];
+      B[1] = tgt_point.y - tgt_centroid[1];
+      B[2] = tgt_point.z - tgt_centroid[2];
+
+      H += (A * B.transpose());
+    }
+
+    Eigen::JacobiSVD<Eigen::Matrix3f> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+    Eigen::Matrix3f R = svd.matrixV() * svd.matrixU().transpose();
+
+    transformation.topLeftCorner(3, 3) = R;
+    transformation.block(0, 3, 3, 1) = tgt_centroid.head(3) - R * src_centroid.head(3);
   }
 
 private:
@@ -168,12 +215,12 @@ private:
 
   pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr kd_tree_;
 
-  Eigen::Matrix4f pose_;
+  Eigen::Matrix4f transformation_;
 
   // parameter
-  double error_thoreshold_correspondence_;
-  double cost_scaling_;
-  double partial_derivative_coeff_;
+  double epsilon_;
+  double correspondence_distance_{2.0};
+  int max_iteration_;
 };
 
 }  // namespace registration
