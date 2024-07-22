@@ -16,12 +16,14 @@
 #define NAVYU_SLAM__SCAN_MATCHER_HPP_
 
 #include "navyu_slam/icp.hpp"
+#include "navyu_slam/particle_filter.hpp"
 
 #include <laser_geometry/laser_geometry.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
+#include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
@@ -53,12 +55,14 @@ private:
   void publish_tf(
     const geometry_msgs::msg::Pose pose, const rclcpp::Time stamp, const std::string frame_id,
     const std::string child_frame_id);
+  void publish_particle(const rclcpp::Time stamp);
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_subscriber_;
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     initial_pose_subscriber_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_stamped_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr particle_array_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr submap_publisher_;
 
   tf2_ros::Buffer tf_buffer_{get_clock()};
@@ -66,6 +70,7 @@ private:
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 
   registration::Icp<pcl::PointXYZ, pcl::PointXYZ> icp_;
+  std::shared_ptr<ParticleFilter> particle_filter_ptr_;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr target_scan_;
 
@@ -85,6 +90,12 @@ private:
   double min_scan_range_;
 
   std::vector<pcl::PointCloud<pcl::PointXYZ>> keyframes_;
+
+  rclcpp::Time previous_stamp_;
+  bool is_first_{true};
+
+  Eigen::Vector3d previous_pose_;
+  Eigen::Quaterniond previous_quaternion_;
 };
 
 #endif

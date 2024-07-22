@@ -1,9 +1,9 @@
 scan_matcher_node:
   ros__parameters:
     robot_frame_id: base_link
-    displacement: 0.2
-    downsample_leaf_size: 0.2
+    displacement: 0.1
+    downsample_leaf_size: 0.05
     max_iteration: 64
-    max_scan_accumulate_num: 3
+    max_scan_accumulate_num: 1
     max_scan_range: 100.0
-    min_scan_range: 1.0
+    min_scan_range: 0.1
