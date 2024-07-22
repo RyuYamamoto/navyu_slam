@@ -15,6 +15,7 @@
 #ifndef NAVYU_SLAM__SCAN_MATCHER_HPP_
 #define NAVYU_SLAM__SCAN_MATCHER_HPP_
 
+#include "navyu_slam/ceres_scan_matcher.hpp"
 #include "navyu_slam/icp.hpp"
 
 #include <laser_geometry/laser_geometry.hpp>
@@ -66,6 +67,7 @@ private:
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 
   registration::Icp<pcl::PointXYZ, pcl::PointXYZ> icp_;
+  registration::CeresScanMatcher ceres_scan_matcher_;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr target_scan_;
 

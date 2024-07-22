@@ -16,7 +16,6 @@
 #define NAVYU_SLAM__ICP_HPP_
 
 #include <Eigen/Core>
-#include <pcl/impl/point_types.hpp>
 #include <pcl_ros/transforms.hpp>
 
 #include <omp.h>
