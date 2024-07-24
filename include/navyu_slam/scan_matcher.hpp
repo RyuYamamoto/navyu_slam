@@ -80,6 +80,7 @@ private:
   bool first_scan_recieve_{false};
 
   std::string robot_frame_id_;
+  std::string map_frame_id_;
   double displacement_;
   double downsample_leaf_size_;
   int max_scan_accumulate_num_;

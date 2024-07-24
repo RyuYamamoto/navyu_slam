@@ -17,6 +17,7 @@
 ScanMatcher::ScanMatcher() : Node("scan_matcher")
 {
   robot_frame_id_ = declare_parameter<std::string>("robot_frame_id");
+  map_frame_id_ = declare_parameter<std::string>("map_frame_id");
   displacement_ = declare_parameter<double>("displacement");
   downsample_leaf_size_ = declare_parameter<double>("downsample_leaf_size");
   max_scan_accumulate_num_ = declare_parameter<int>("max_scan_accumulate_num");
@@ -31,7 +32,8 @@ ScanMatcher::ScanMatcher() : Node("scan_matcher")
   pose_stamped_publisher_ = create_publisher<geometry_msgs::msg::PoseStamped>("icp_pose", 5);
   submap_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("submap", 5);
   laser_scan_subscriber_ = create_subscription<sensor_msgs::msg::LaserScan>(
-    "scan", 5, std::bind(&ScanMatcher::laser_scan_callback, this, std::placeholders::_1));
+    "scan", rclcpp::QoS(5).best_effort(),
+    std::bind(&ScanMatcher::laser_scan_callback, this, std::placeholders::_1));
   initial_pose_subscriber_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "initialpose", 5, std::bind(&ScanMatcher::initial_pose_callback, this, std::placeholders::_1));
 }
@@ -85,19 +87,19 @@ void ScanMatcher::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedP
     key_frame_ = Eigen::Matrix4f::Identity();
 
     *target_scan_ += *transformed_cloud;
-    icp_.set_target_cloud(transformed_cloud);
+    ceres_scan_matcher_.set_target_cloud(transformed_cloud);
     sensor_msgs::msg::PointCloud2 submap_msg;
     pcl::toROSMsg(*target_scan_, submap_msg);
-    submap_msg.header.frame_id = "map";
+    submap_msg.header.frame_id = map_frame_id_;
     submap_msg.header.stamp = current_stamp;
     submap_publisher_->publish(submap_msg);
   }
 
-  icp_.set_input_cloud(filtered_cloud);
+  ceres_scan_matcher_.set_input_cloud(filtered_cloud);
 
-  icp_.align(initial_transformation_);
+  ceres_scan_matcher_.align(initial_transformation_);
 
-  transformation_ = icp_.get_transformation();
+  transformation_ = ceres_scan_matcher_.get_transformation();
 
   const Eigen::Vector3d current_position = transformation_.block<3, 1>(0, 3).cast<double>();
   const Eigen::Quaterniond current_quaternion(transformation_.block<3, 3>(0, 0).cast<double>());
@@ -116,25 +118,25 @@ void ScanMatcher::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedP
       *target_scan_ += keyframes_[sub_map_size - 1 - idx];
     }
 
-    icp_.set_target_cloud(target_scan_);
+    ceres_scan_matcher_.set_target_cloud(target_scan_);
 
     sensor_msgs::msg::PointCloud2 submap_msg;
     pcl::toROSMsg(*target_scan_, submap_msg);
-    submap_msg.header.frame_id = "map";
+    submap_msg.header.frame_id = map_frame_id_;
     submap_msg.header.stamp = current_stamp;
     submap_publisher_->publish(submap_msg);
   }
 
   // publish pose
   geometry_msgs::msg::PoseStamped estimate_pose;
-  estimate_pose.header.frame_id = "map";
+  estimate_pose.header.frame_id = map_frame_id_;
   estimate_pose.header.stamp = current_stamp;
   estimate_pose.pose.position = tf2::toMsg(current_position);
   estimate_pose.pose.position.z = 0.0;
   estimate_pose.pose.orientation = tf2::toMsg(current_quaternion);
   pose_stamped_publisher_->publish(estimate_pose);
 
-  publish_tf(estimate_pose.pose, current_stamp, "map", robot_frame_id_);
+  publish_tf(estimate_pose.pose, current_stamp, map_frame_id_, robot_frame_id_);
 
   initial_transformation_ = transformation_;
 }

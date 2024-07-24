@@ -29,40 +29,53 @@ using ceres::CauchyLoss;
 
 namespace registration
 {
-struct ScanMatchingCost
+
+struct CostFunction
 {
-  ScanMatchingCost(const Eigen::Vector2d & source, const Eigen::Vector2d & target)
-  : source_(source), target_(target)
+  CostFunction(const Eigen::Vector2d & p, const Eigen::Vector2d & p1, const Eigen::Vector2d & p2)
+  : p_(p), p1_(p1), p2_(p2)
   {
   }
 
-  template <typename T>
-  bool operator()(const T * const transform, T * residual) const
+  static ceres::CostFunction * create(
+    const Eigen::Vector2d & p, const Eigen::Vector2d & p1, const Eigen::Vector2d & p2)
   {
-    T x = T(source_[0]);
-    T y = T(source_[1]);
+    return (new ceres::AutoDiffCostFunction<CostFunction, 1, 3>(new CostFunction(p, p1, p2)));
+  }
 
-    T cos_theta = cos(transform[2]);
-    T sin_theta = sin(transform[2]);
+  template <typename T>
+  bool operator()(const T * const pose, T * residual) const
+  {
+    // get 2d rotation matrix from optimize pose
+    T R[2][2];
+    R[0][0] = ceres::cos(pose[2]);
+    R[0][1] = -ceres::sin(pose[2]);
+    R[1][0] = ceres::sin(pose[2]);
+    R[1][1] = ceres::cos(pose[2]);
 
-    T trans_x = transform[0] + cos_theta * x - sin_theta * y;
-    T trans_y = transform[1] + sin_theta * x + cos_theta * y;
+    T p_trans[2];
+    p_trans[0] = R[0][0] * T(p_(0)) + R[0][1] * T(p_(1));
+    p_trans[1] = R[1][0] * T(p_(0)) + R[1][1] * T(p_(1));
+    p_trans[0] += pose[0];
+    p_trans[1] += pose[1];
 
-    residual[0] = trans_x - T(target_[0]);
-    residual[1] = trans_y - T(target_[1]);
+    // get normal vector
+    T normal[2];
+    normal[0] = T(-(p1_(1) - p2_(1)));
+    normal[1] = T(p1_(0) - p2_(0));
+    // normalize
+    T norm = ceres::hypot(normal[0], normal[1]);
+    normal[0] /= norm;
+    normal[1] /= norm;
+
+    residual[0] = (p_trans[0] - T(p1_(0))) * normal[0] + (p_trans[1] - T(p1_(1))) * normal[1];
 
     return true;
   }
 
-  static ceres::CostFunction * Create(
-    const Eigen::Vector2d & source, const Eigen::Vector2d & target)
-  {
-    return (new ceres::AutoDiffCostFunction<ScanMatchingCost, 2, 3>(
-      new ScanMatchingCost(source, target)));
-  }
-
-  const Eigen::Vector2d source_;
-  const Eigen::Vector2d target_;
+  const Eigen::Vector2d p_;
+  const Eigen::Vector2d p1_;
+  const Eigen::Vector2d p2_;
 };
 
 class CeresScanMatcher
@@ -91,31 +104,6 @@ public:
     kd_tree_->setInputCloud(target_cloud_);
   }
 
-  std::vector<CorrespondenceData> find_correspoindence(
-    const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::Matrix4f pose)
-  {
-    std::vector<CorrespondenceData> correspondences;
-    correspondences.resize(cloud->size());
-
-    std::vector<float> dist(1);
-    std::vector<int> indices(1);
-    for (int i = 0; i < cloud->points.size(); i++) {
-      pcl::PointXYZ transform_point;
-      transform_point.getVector4fMap() = pose * cloud->points[i].getVector4fMap();
-
-      int ret = kd_tree_->nearestKSearch(transform_point, 1, indices, dist);
-
-      if (0 < ret && dist[0] < correspondence_distance_ * correspondence_distance_) {
-        CorrespondenceData correspondence;
-        correspondence.source_point = transform_point;
-        correspondence.target_point = target_cloud_->points[indices[0]];
-        correspondences[i] = correspondence;
-      }
-    }
-
-    return correspondences;
-  }
-
   void align(Eigen::Matrix4f initial_pose)
   {
     if (input_cloud_ == nullptr) {
@@ -127,10 +115,6 @@ public:
       return;
     }
     // transformation_ = initial_pose;
-
-    std::vector<CorrespondenceData> correspondences =
-      find_correspoindence(input_cloud_, transformation_);
-
     const Eigen::Vector3d current_scan_position = transformation_.block<3, 1>(0, 3).cast<double>();
     const Eigen::Quaterniond current_scan_quaternion(
       transformation_.block<3, 3>(0, 0).cast<double>());
@@ -152,11 +136,24 @@ public:
 
     double transform[3] = {transformation_pose(0), transformation_pose(1), transformation_pose(5)};
 
+    std::vector<float> dist(1);
+    std::vector<int> indices(1);
     ceres::Problem problem;
-    for (auto & correspondence : correspondences) {
-      Eigen::Vector2d source = correspondence.source_point.getVector4fMap().cast<double>().head(2);
-      Eigen::Vector2d target = correspondence.target_point.getVector4fMap().cast<double>().head(2);
-      problem.AddResidualBlock(ScanMatchingCost::Create(source, target), nullptr, transform);
+    for (int i = 0; i < input_cloud_->points.size(); i++) {
+      pcl::PointXYZ transform_point;
+      transform_point.getVector4fMap() = transformation_ * input_cloud_->points[i].getVector4fMap();
+
+      int ret = kd_tree_->nearestKSearch(transform_point, 2, indices, dist);
+
+      if (0 < ret) {
+        Eigen::Vector2d p = transform_point.getVector4fMap().head(2).cast<double>();
+        Eigen::Vector2d p1 =
+          target_cloud_->points[indices[0]].getVector4fMap().head(2).cast<double>();
+        Eigen::Vector2d p2 =
+          target_cloud_->points[indices[1]].getVector4fMap().head(2).cast<double>();
+
+        problem.AddResidualBlock(CostFunction::create(p, p1, p2), nullptr, transform);
+      }
     }
 
     ceres::Solver::Options options;
@@ -176,7 +173,7 @@ public:
     delta_matrix(0, 3) = transform[0];
     delta_matrix(1, 3) = transform[1];
 
-    transformation_ = transformation_ * delta_matrix;
+    transformation_ = delta_matrix * transformation_;
   }
 
   Eigen::Matrix4f get_transformation() { return transformation_; }

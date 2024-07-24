@@ -21,7 +21,8 @@ NavyuSLAM::NavyuSLAM()
   max_(std::numeric_limits<float>::min(), std::numeric_limits<float>::min())
 {
   laser_scan_subscriber_ = create_subscription<sensor_msgs::msg::LaserScan>(
-    "scan", 10, std::bind(&NavyuSLAM::laser_scan_callback, this, std::placeholders::_1));
+    "scan", rclcpp::QoS(5).best_effort(),
+    std::bind(&NavyuSLAM::laser_scan_callback, this, std::placeholders::_1));
   map_publisher_ =
     create_publisher<nav_msgs::msg::OccupancyGrid>("map", rclcpp::QoS{1}.transient_local());
 
