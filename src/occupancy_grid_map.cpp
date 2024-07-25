@@ -52,8 +52,10 @@ void OccupancyGridMap::update(SubMap submap)
 
 void OccupancyGridMap::generate(std::vector<SubMap> submap)
 {
-  map_value_.clear();
-  for (auto map : submap) update(map);
+  std::fill(map_value_.begin(), map_value_.end(), 0);
+  for (auto map : submap) {
+    update(map);
+  }
 }
 
 void OccupancyGridMap::bresenham(

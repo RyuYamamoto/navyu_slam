@@ -108,15 +108,20 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
   sub_map_.emplace_back(submap);
 
   // update grid map
-  grid_map_->update(submap);
+  // grid_map_->update(submap);
+  int width = std::ceil((max_[0] - min_[0]) / resolution_);
+  int height = std::ceil((max_[1] - min_[1]) / resolution_);
+  grid_map_->set_size(width, height);
+  grid_map_->set_origin(Eigen::Vector3f(min_[0], min_[1], 0.0));
+  grid_map_->generate(sub_map_);
 
   // convert occupancy grid message
   nav_msgs::msg::OccupancyGrid grid_msg;
-  grid_msg.info.height = width_;
-  grid_msg.info.width = height_;
+  grid_msg.info.height = height;
+  grid_msg.info.width = width;
   grid_msg.info.resolution = resolution_;
-  grid_msg.info.origin.position.x = -static_cast<double>(width_ * resolution_) / 2.0;
-  grid_msg.info.origin.position.y = -static_cast<double>(height_ * resolution_) / 2.0;
+  grid_msg.info.origin.position.x = min_[0];  // - static_cast<double>(width * resolution_) / 2.0;
+  grid_msg.info.origin.position.y = min_[1];  // - static_cast<double>(height * resolution_) / 2.0;
   grid_msg.header.frame_id = odom_frame_id_;
   grid_msg.header.stamp = now();
   grid_msg.data = grid_map_->get_map_with_probability();

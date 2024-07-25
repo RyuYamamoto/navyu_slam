@@ -29,6 +29,13 @@ public:
   ~OccupancyGridMap() = default;
 
   void set_origin(Eigen::Vector3f origin) { origin_ = origin; }
+  void set_size(int width, int height)
+  {
+    width_ = width;
+    height_ = height;
+    map_value_.resize(width * height);
+    for (int i = 0; i < map_value_.size(); i++) map_value_[i] = log_odds(0.5);
+  }
 
   void update(SubMap submap);
   void generate(std::vector<SubMap> submap);

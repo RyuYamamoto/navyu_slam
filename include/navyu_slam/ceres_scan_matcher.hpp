@@ -134,7 +134,7 @@ public:
     transformation_pose(4) = pitch;
     transformation_pose(5) = yaw;
 
-    double transform[3] = {transformation_pose(0), transformation_pose(1), transformation_pose(5)};
+    double transform[3] = {0.0};
 
     std::vector<float> dist(1);
     std::vector<int> indices(1);
@@ -152,12 +152,12 @@ public:
         Eigen::Vector2d p2 =
           target_cloud_->points[indices[1]].getVector4fMap().head(2).cast<double>();
 
-        problem.AddResidualBlock(CostFunction::create(p, p1, p2), nullptr, transform);
+        problem.AddResidualBlock(CostFunction::create(p, p1, p2), new CauchyLoss(0.5), transform);
       }
     }
 
     ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
     options.minimizer_progress_to_stdout = true;
 
     ceres::Solver::Summary summary;
