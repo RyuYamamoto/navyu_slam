@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License
 
-#include "navyu_slam/scan_matcher.hpp"
+#include "navyu_slam/scan_matching/scan_matcher.hpp"
 
 ScanMatcher::ScanMatcher() : Node("scan_matcher")
 {

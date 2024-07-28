@@ -15,7 +15,7 @@
 #ifndef NAVYU_SLAM__CERES_SCAN_MATCHER_HPP_
 #define NAVYU_SLAM__CERES_SCAN_MATCHER_HPP_
 
-#include "navyu_slam/icp.hpp"
+#include "navyu_slam/scan_matching/icp.hpp"
 
 #include <Eigen/Core>
 #include <pcl_ros/transforms.hpp>
@@ -119,21 +119,6 @@ public:
     const Eigen::Quaterniond current_scan_quaternion(
       transformation_.block<3, 3>(0, 0).cast<double>());
 
-    Eigen::VectorXd transformation_pose(6);
-    transformation_pose(0) = current_scan_position.x();
-    transformation_pose(1) = current_scan_position.y();
-    transformation_pose(2) = current_scan_position.z();
-
-    tf2::Quaternion quat(
-      current_scan_quaternion.x(), current_scan_quaternion.y(), current_scan_quaternion.z(),
-      current_scan_quaternion.w());
-    tf2::Matrix3x3 mat(quat);
-    double roll, pitch, yaw;
-    mat.getRPY(roll, pitch, yaw);
-    transformation_pose(3) = roll;
-    transformation_pose(4) = pitch;
-    transformation_pose(5) = yaw;
-
     double transform[3] = {0.0};
 
     std::vector<float> dist(1);
@@ -157,8 +142,8 @@ public:
     }
 
     ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.minimizer_progress_to_stdout = true;
+    options.linear_solver_type = ceres::DENSE_QR;
+    options.minimizer_progress_to_stdout = false;
 
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);

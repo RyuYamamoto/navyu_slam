@@ -16,12 +16,12 @@ find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
 ament_auto_add_executable(scan_matcher_node
-  src/scan_matcher.cpp
+  src/scan_matching/scan_matcher.cpp
 )
 
 ament_auto_add_executable(navyu_slam_node
   src/navyu_slam.cpp
-  src/occupancy_grid_map.cpp
+  src/mapping/occupancy_grid_map.cpp
 )
 
 include_directories(${CERES_INCLUDE_DIRS})

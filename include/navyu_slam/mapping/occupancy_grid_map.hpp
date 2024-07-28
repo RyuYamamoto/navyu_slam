@@ -15,7 +15,7 @@
 #ifndef NAVYU_SLAM__OCCUPANCY_GRID_MAP_HPP_
 #define NAVYU_SLAM__OCCUPANCY_GRID_MAP_HPP_
 
-#include "navyu_slam/submap.hpp"
+#include "navyu_slam/mapping/submap.hpp"
 
 #include <nav_msgs/msg/occupancy_grid.hpp>
 
@@ -24,8 +24,7 @@
 class OccupancyGridMap
 {
 public:
-  explicit OccupancyGridMap(
-    int width, int height, double resolution, double probability_occ, double probability_free);
+  explicit OccupancyGridMap(double resolution, double probability_occ, double probability_free);
   ~OccupancyGridMap() = default;
 
   void set_origin(Eigen::Vector3f origin) { origin_ = origin; }
@@ -40,7 +39,7 @@ public:
   void update(SubMap submap);
   void generate(std::vector<SubMap> submap);
   inline std::vector<int> get_map() { return map_value_; }
-  inline std::vector<int8_t> get_map_with_probability()
+  inline nav_msgs::msg::OccupancyGrid get_map_with_probability()
   {
     std::vector<int8_t> map_with_probability;
     map_with_probability.resize(map_value_.size());
@@ -48,7 +47,15 @@ public:
     for (int i = 0; i < map_value_.size(); i++)
       map_with_probability[i] = probability(map_value_[i]) * 100.0;
 
-    return map_with_probability;
+    nav_msgs::msg::OccupancyGrid grid_map;
+    grid_map.info.width = width_;
+    grid_map.info.height = height_;
+    grid_map.info.resolution = resolution_;
+    grid_map.info.origin.position.x = origin_.x();
+    grid_map.info.origin.position.y = origin_.y();
+    grid_map.data = map_with_probability;
+
+    return grid_map;
   }
   inline bool is_inside(int mx, int my)
   {

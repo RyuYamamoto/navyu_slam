@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License
 
-#include "navyu_slam/occupancy_grid_map.hpp"
+#include "navyu_slam/mapping/occupancy_grid_map.hpp"
 
 OccupancyGridMap::OccupancyGridMap(
-  int width, int height, double resolution, double probability_occ, double probability_free)
-: width_(width),
-  height_(height),
+  double resolution, double probability_occ, double probability_free)
+: width_(100),
+  height_(100),
   resolution_(resolution),
   probability_occ_(probability_occ),
   probability_free_(probability_free),

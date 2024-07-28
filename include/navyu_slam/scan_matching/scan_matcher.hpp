@@ -15,8 +15,8 @@
 #ifndef NAVYU_SLAM__SCAN_MATCHER_HPP_
 #define NAVYU_SLAM__SCAN_MATCHER_HPP_
 
-#include "navyu_slam/ceres_scan_matcher.hpp"
-#include "navyu_slam/icp.hpp"
+#include "navyu_slam/scan_matching/ceres_scan_matcher.hpp"
+#include "navyu_slam/scan_matching/icp.hpp"
 
 #include <laser_geometry/laser_geometry.hpp>
 #include <pcl_ros/transforms.hpp>

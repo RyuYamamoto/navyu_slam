@@ -16,7 +16,7 @@
 
 NavyuSLAM::NavyuSLAM()
 : Node("navyu_slam"),
-  previous_odom_pose_(Eigen::Matrix4f::Identity()),
+  previous_pose_(Eigen::Matrix4f::Identity()),
   min_(std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
   max_(std::numeric_limits<float>::min(), std::numeric_limits<float>::min())
 {
@@ -26,21 +26,16 @@ NavyuSLAM::NavyuSLAM()
   map_publisher_ =
     create_publisher<nav_msgs::msg::OccupancyGrid>("map", rclcpp::QoS{1}.transient_local());
 
+  map_frame_id_ = declare_parameter<std::string>("map_frame_id");
   odom_frame_id_ = declare_parameter<std::string>("odom_frame_id");
   robot_frame_id_ = declare_parameter<std::string>("robot_frame_id");
   displacement_ = declare_parameter<double>("displacement");
   probability_free_ = declare_parameter<double>("probability_free");
   probability_occ_ = declare_parameter<double>("probability_occ");
 
-  width_ = declare_parameter<int>("width");
-  height_ = declare_parameter<int>("height");
   resolution_ = declare_parameter<double>("resolution");
 
-  grid_map_ = std::make_shared<OccupancyGridMap>(
-    width_, height_, resolution_, probability_occ_, probability_free_);
-  grid_map_->set_origin(Eigen::Vector3f(
-    -static_cast<double>(width_ * resolution_) / 2.0,
-    -static_cast<double>(height_ * resolution_) / 2.0, 0.0));
+  grid_map_ = std::make_shared<OccupancyGridMap>(resolution_, probability_occ_, probability_free_);
 }
 
 void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
@@ -48,20 +43,20 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
   // get odom pose
   // TODO: replace scan matching
   geometry_msgs::msg::TransformStamped odom_pose;
-  if (!get_transform(odom_frame_id_, robot_frame_id_, odom_pose)) {
+  if (!get_transform(map_frame_id_, robot_frame_id_, odom_pose)) {
     RCLCPP_ERROR_STREAM(get_logger(), "Can not get frame.");
     return;
   }
-  const Eigen::Affine3d odom_to_robot_affine = tf2::transformToEigen(odom_pose);
-  const Eigen::Matrix4f odom_to_robot = odom_to_robot_affine.matrix().cast<float>();
+  const Eigen::Affine3d map_to_robot_affine = tf2::transformToEigen(odom_pose);
+  const Eigen::Matrix4f map_to_robot = map_to_robot_affine.matrix().cast<float>();
 
   // check displacement
-  const Eigen::Vector3f current_position = odom_to_robot.block<3, 1>(0, 3).cast<float>();
-  const Eigen::Vector3f previous_position = previous_odom_pose_.block<3, 1>(0, 3).cast<float>();
+  const Eigen::Vector3f current_position = map_to_robot.block<3, 1>(0, 3).cast<float>();
+  const Eigen::Vector3f previous_position = previous_pose_.block<3, 1>(0, 3).cast<float>();
   const double delta = (current_position - previous_position).norm();
   if (delta < displacement_) return;
 
-  previous_odom_pose_ = odom_to_robot;
+  previous_pose_ = map_to_robot;
 
   // convert laser scan to point cloud msg
   sensor_msgs::msg::PointCloud2 cloud_msg;
@@ -84,11 +79,11 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
   pcl::transformPointCloud(*laser_cloud, *base_to_laser_cloud, robot_to_laser);
 
   // transform point cloud odom to base
-  pcl::PointCloud<pcl::PointXYZ>::Ptr odom_to_laser_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::transformPointCloud(*laser_cloud, *odom_to_laser_cloud, (odom_to_robot * robot_to_laser));
+  pcl::PointCloud<pcl::PointXYZ>::Ptr map_to_laser_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::transformPointCloud(*laser_cloud, *map_to_laser_cloud, (map_to_robot * robot_to_laser));
 
   // update map
-  for (auto & point : odom_to_laser_cloud->points) {
+  for (auto & point : map_to_laser_cloud->points) {
     // check map min / max
     // check min
     if (point.x < min_[0])
@@ -103,8 +98,8 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
   }
 
   // generate submap
-  SubMap submap(laser_cloud, odom_to_robot, delta);
-  submap.transform_point_cloud(odom_to_robot * robot_to_laser);
+  SubMap submap(laser_cloud, map_to_robot, delta);
+  submap.transform_point_cloud(map_to_robot * robot_to_laser);
   sub_map_.emplace_back(submap);
 
   // update grid map
@@ -116,16 +111,11 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
   grid_map_->generate(sub_map_);
 
   // convert occupancy grid message
-  nav_msgs::msg::OccupancyGrid grid_msg;
-  grid_msg.info.height = height;
-  grid_msg.info.width = width;
-  grid_msg.info.resolution = resolution_;
-  grid_msg.info.origin.position.x = min_[0];  // - static_cast<double>(width * resolution_) / 2.0;
-  grid_msg.info.origin.position.y = min_[1];  // - static_cast<double>(height * resolution_) / 2.0;
-  grid_msg.header.frame_id = odom_frame_id_;
-  grid_msg.header.stamp = now();
-  grid_msg.data = grid_map_->get_map_with_probability();
-  map_publisher_->publish(grid_msg);
+  nav_msgs::msg::OccupancyGrid grid_map_msg = grid_map_->get_map_with_probability();
+  grid_map_msg.header.frame_id = map_frame_id_;
+  grid_map_msg.header.stamp = now();
+
+  map_publisher_->publish(grid_map_msg);
 }
 
 bool NavyuSLAM::get_odom_pose(geometry_msgs::msg::Pose & odom)

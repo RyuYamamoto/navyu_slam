@@ -15,8 +15,8 @@
 #ifndef NAVYU_SLAM__NAVYU_SLAM_HPP_
 #define NAVYU_SLAM__NAVYU_SLAM_HPP_
 
-#include "navyu_slam/occupancy_grid_map.hpp"
-#include "navyu_slam/submap.hpp"
+#include "navyu_slam/mapping/occupancy_grid_map.hpp"
+#include "navyu_slam/mapping/submap.hpp"
 
 #include <laser_geometry/laser_geometry.hpp>
 #include <pcl_ros/transforms.hpp>
@@ -61,11 +61,12 @@ private:
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 
+  std::string map_frame_id_;
   std::string odom_frame_id_;
   std::string robot_frame_id_;
   double displacement_;
 
-  Eigen::Matrix4f previous_odom_pose_;
+  Eigen::Matrix4f previous_pose_;
 
   Eigen::Vector2f min_;
   Eigen::Vector2f max_;
