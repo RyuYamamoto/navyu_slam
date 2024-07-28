@@ -15,27 +15,39 @@
 from launch_ros.actions import Node
 
 from launch import LaunchDescription
-from launch.substitutions import LaunchConfiguration
 from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
+from launch.conditions import IfCondition
 
 
 def generate_launch_description():
-    use_sim_time = LaunchConfiguration("use_sim_time", default="true")
     scan_matcher_config = PathJoinSubstitution(
         [FindPackageShare("navyu_slam"), "config", "scan_matcher_params.yaml"]
+    )
+    rviz_config = PathJoinSubstitution(
+        [FindPackageShare("navyu_slam"), "rviz", "navyu_slam.rviz"]
     )
 
     return LaunchDescription(
         [
+            DeclareLaunchArgument("use_rviz", default_value="true"),
             DeclareLaunchArgument("use_sim_time", default_value="true"),
             Node(
                 package="navyu_slam",
                 executable="scan_matcher_node",
                 name="scan_matcher_node",
                 output="screen",
-                parameters=[scan_matcher_config, {"use_sim_time": use_sim_time}],
+                parameters=[scan_matcher_config, 
+                            {"use_sim_time": LaunchConfiguration("use_sim_time")}],
             ),
+            Node(
+                condition=IfCondition(LaunchConfiguration("use_rviz")),
+                package="rviz2",
+                executable="rviz2",
+                name="rviz2",
+                arguments=["-d", rviz_config],
+            )
         ]
     )
