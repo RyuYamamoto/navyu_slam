@@ -29,6 +29,7 @@ ScanMatcher::ScanMatcher() : Node("scan_matcher")
 
   broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
+  estimated_path_publisher_ = create_publisher<nav_msgs::msg::Path>("estimated_path", 5);
   pose_stamped_publisher_ = create_publisher<geometry_msgs::msg::PoseStamped>("icp_pose", 5);
   submap_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("submap", 5);
   laser_scan_subscriber_ = create_subscription<sensor_msgs::msg::LaserScan>(
@@ -117,7 +118,6 @@ void ScanMatcher::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedP
       if ((sub_map_size - 1 - idx) < 0) continue;
       *target_scan_ += keyframes_[sub_map_size - 1 - idx];
     }
-
     ceres_scan_matcher_.set_target_cloud(target_scan_);
 
     sensor_msgs::msg::PointCloud2 submap_msg;
@@ -136,6 +136,13 @@ void ScanMatcher::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedP
   estimate_pose.pose.orientation = tf2::toMsg(current_quaternion);
   pose_stamped_publisher_->publish(estimate_pose);
 
+  // update estimate path
+  estimated_path_.poses.emplace_back(estimate_pose);
+  estimated_path_.header.frame_id = map_frame_id_;
+  estimated_path_.header.stamp = current_stamp;
+  estimated_path_publisher_->publish(estimated_path_);
+
+  // publish tf
   publish_tf(estimate_pose.pose, current_stamp, map_frame_id_, robot_frame_id_);
 
   initial_transformation_ = transformation_;

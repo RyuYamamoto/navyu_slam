@@ -25,6 +25,7 @@
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 
 #include <pcl/filters/voxel_grid.h>
@@ -61,6 +62,7 @@ private:
     initial_pose_subscriber_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_stamped_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr submap_publisher_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr estimated_path_publisher_;
 
   tf2_ros::Buffer tf_buffer_{get_clock()};
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
@@ -86,6 +88,8 @@ private:
   int max_scan_accumulate_num_;
   double max_scan_range_;
   double min_scan_range_;
+
+  nav_msgs::msg::Path estimated_path_;
 
   std::vector<pcl::PointCloud<pcl::PointXYZ>> keyframes_;
 };
