@@ -17,6 +17,7 @@
 ScanMatcher::ScanMatcher() : Node("scan_matcher")
 {
   robot_frame_id_ = declare_parameter<std::string>("robot_frame_id");
+  base_frame_id_ = declare_parameter<std::string>("base_frame_id");
   map_frame_id_ = declare_parameter<std::string>("map_frame_id");
   displacement_ = declare_parameter<double>("displacement");
   downsample_leaf_size_ = declare_parameter<double>("downsample_leaf_size");
@@ -143,7 +144,7 @@ void ScanMatcher::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedP
   estimated_path_publisher_->publish(estimated_path_);
 
   // publish tf
-  publish_tf(estimate_pose.pose, current_stamp, map_frame_id_, robot_frame_id_);
+  publish_tf(estimate_pose.pose, current_stamp, map_frame_id_, base_frame_id_);
 
   initial_transformation_ = transformation_;
 }

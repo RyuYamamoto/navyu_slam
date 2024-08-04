@@ -15,8 +15,8 @@
 #ifndef NAVYU_SLAM__NAVYU_SLAM_HPP_
 #define NAVYU_SLAM__NAVYU_SLAM_HPP_
 
-#include "navyu_slam/mapping/occupancy_grid_map.hpp"
-#include "navyu_slam/mapping/submap.hpp"
+#include "navyu_slam/mapping/map_generator.hpp"
+#include "navyu_slam/util.hpp"
 
 #include <laser_geometry/laser_geometry.hpp>
 #include <pcl_ros/transforms.hpp>
@@ -26,6 +26,7 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 
 #include <pcl/point_cloud.h>
@@ -35,25 +36,42 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <thread>
+
 class NavyuSLAM : public rclcpp::Node
 {
 public:
   NavyuSLAM();
-  ~NavyuSLAM() = default;
+  ~NavyuSLAM();
 
   void laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg);
 
 private:
-  bool get_odom_pose(geometry_msgs::msg::Pose & odom);
+  bool get_odom_pose(Eigen::Matrix4f & odom);
   bool get_transform(
     const std::string target_frame, const std::string source_frame,
     geometry_msgs::msg::TransformStamped & frame);
+  bool get_transform(
+    const std::string target_frame, const std::string source_frame, Eigen::Matrix4f & matrix);
+  void publish_tf(
+    const geometry_msgs::msg::Pose pose, const rclcpp::Time stamp, const std::string frame_id,
+    const std::string child_frame_id);
+
+  void update_map();
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_subscriber_;
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr map_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_stamped_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr submap_publisher_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr estimated_path_publisher_;
 
-  std::shared_ptr<OccupancyGridMap> grid_map_;
+  std::shared_ptr<std::thread> map_publish_thread_;
+
+  registration::Icp icp_;
+  registration::CeresScanMatcher ceres_scan_matcher_;
+
+  std::shared_ptr<MapGenerator> map_generator_;
 
   laser_geometry::LaserProjection projection_;
 
@@ -64,21 +82,14 @@ private:
   std::string map_frame_id_;
   std::string odom_frame_id_;
   std::string robot_frame_id_;
-  double displacement_;
 
-  Eigen::Matrix4f previous_pose_;
+  nav_msgs::msg::Path estimated_path_;
 
-  Eigen::Vector2f min_;
-  Eigen::Vector2f max_;
+  bool use_odom_{true};
 
-  std::vector<SubMap> sub_map_;
-
-  double resolution_;
-  int width_;
-  int height_;
-
-  double probability_occ_;
-  double probability_free_;
+  std::thread map_update_thread_;
+  std::mutex map_mutex_;
+  double map_publish_interval_;
 };
 
 #endif

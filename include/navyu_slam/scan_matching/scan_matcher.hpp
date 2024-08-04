@@ -68,7 +68,7 @@ private:
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 
-  registration::Icp<pcl::PointXYZ, pcl::PointXYZ> icp_;
+  registration::Icp icp_;
   registration::CeresScanMatcher ceres_scan_matcher_;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr target_scan_;
@@ -82,6 +82,7 @@ private:
   bool first_scan_recieve_{false};
 
   std::string robot_frame_id_;
+  std::string base_frame_id_;
   std::string map_frame_id_;
   double displacement_;
   double downsample_leaf_size_;

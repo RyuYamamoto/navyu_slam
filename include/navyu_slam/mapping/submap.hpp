@@ -33,6 +33,7 @@ public:
   : scan_raw_(scan), pose_(pose), accumulate_distance_(accumulate_distance)
   {
     transform_scan_.reset(new PointCloud);
+    transform_point_cloud(pose);
   }
   ~SubMap() = default;
 

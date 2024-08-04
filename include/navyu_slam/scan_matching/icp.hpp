@@ -33,12 +33,8 @@ struct CorrespondenceData
   int target_index;
 };
 
-template <typename PointSource, typename PointTarget>
 class Icp
 {
-  using PointSourceCloudPtr = typename pcl::PointCloud<PointSource>::Ptr;
-  using PointTargetCloudPtr = typename pcl::PointCloud<PointTarget>::Ptr;
-
 public:
   Icp()
   {
@@ -54,8 +50,11 @@ public:
 
   void set_max_iteration(int max_iteration) { max_iteration_ = max_iteration; }
 
-  void set_input_cloud(const PointSourceCloudPtr input_cloud) { input_cloud_ = input_cloud; }
-  void set_target_cloud(const PointTargetCloudPtr target_cloud)
+  void set_input_cloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud)
+  {
+    input_cloud_ = input_cloud;
+  }
+  void set_target_cloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr target_cloud)
   {
     if (target_cloud->points.empty()) return;
     target_cloud_ = target_cloud;
@@ -133,34 +132,6 @@ public:
     }
 
     return correspondences;
-  }
-
-  Eigen::Vector4f cetroid(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in)
-  {
-    Eigen::Vector4f centroid(Eigen::Vector4f::Zero());
-
-    for (int i = 0; i < cloud_in->points.size(); i++) {
-      cetroid[0] += cloud_in->points[i].x;
-      cetroid[1] += cloud_in->points[i].y;
-      cetroid[2] += cloud_in->points[i].z;
-    }
-    centroid /= cloud_in->points.size();
-    centroid[3] = 1;
-
-    return centroid;
-  }
-
-  void transform_centroid(
-    const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in, const Eigen::Vector4f centroid,
-    pcl::PointCloud<pcl::PointXYZ>::Ptr & cloud_out)
-  {
-    cloud_out->resize(cloud_in->size());
-
-    for (int i = 0; i < cloud_in->points.size(); i++) {
-      cloud_out->points[i].x = cloud_in->points[i].x - centroid[0];
-      cloud_out->points[i].y = cloud_in->points[i].y - centroid[1];
-      cloud_out->points[i].z = cloud_in->points[i].z - centroid[2];
-    }
   }
 
   void transform(Eigen::Matrix4f & transformation)

@@ -25,7 +25,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -107,22 +107,13 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        base_laser:
-          Value: true
-        base_link:
-          Value: true
-        map:
-          Value: true
       Marker Scale: 1
       Name: TF
-      Show Arrows: true
+      Show Arrows: false
       Show Axes: true
-      Show Names: false
+      Show Names: true
       Tree:
-        map:
-          base_link:
-            base_laser:
-              {}
+        {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -208,7 +199,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 0; 0; 255
+      Color: 25; 255; 0
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
@@ -279,25 +270,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 35.00490951538086
+      Distance: 34.40750503540039
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 4.461587905883789
-        Y: 1.8993191719055176
-        Z: 0.7817183136940002
+        X: 7.242565155029297
+        Y: -4.641804218292236
+        Z: 0.9279319047927856
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5497963428497314
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.013561725616455
+      Yaw: 1.3435642719268799
     Saved: ~
 Window Geometry:
   Displays:
@@ -315,5 +306,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1697
-  X: 1743
+  X: 46
   Y: 27

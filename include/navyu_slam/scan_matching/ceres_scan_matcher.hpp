@@ -61,8 +61,8 @@ struct CostFunction
 
     // get normal vector
     T normal[2];
-    normal[0] = T(-(p1_(1) - p2_(1)));
-    normal[1] = T(p1_(0) - p2_(0));
+    normal[0] = T(p1_(1) - p2_(1));
+    normal[1] = T(-(p1_(0) - p2_(0)));
     // normalize
     T norm = ceres::hypot(normal[0], normal[1]);
     normal[0] /= norm;
@@ -114,12 +114,12 @@ public:
       std::cerr << "target cloud is not set." << std::endl;
       return;
     }
-    // transformation_ = initial_pose;
+    transformation_ = initial_pose;
     const Eigen::Vector3d current_scan_position = transformation_.block<3, 1>(0, 3).cast<double>();
     const Eigen::Quaterniond current_scan_quaternion(
       transformation_.block<3, 3>(0, 0).cast<double>());
 
-    double transform[3] = {0.0};
+    double transform[3] = {0.0, 0.0, 0.0};
 
     std::vector<float> dist(1);
     std::vector<int> indices(1);
@@ -142,7 +142,7 @@ public:
     }
 
     ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_QR;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
     options.minimizer_progress_to_stdout = false;
 
     ceres::Solver::Summary summary;

@@ -42,16 +42,10 @@ def generate_launch_description():
                 executable="navyu_slam_node",
                 name="navyu_slam_node",
                 output="screen",
-                parameters=[navyu_slam_config,
-                            {"use_sim_time": LaunchConfiguration("use_sim_time")}],
-            ),
-            Node(
-                package="navyu_slam",
-                executable="scan_matcher_node",
-                name="scan_matcher_node",
-                output="screen",
-                parameters=[scan_matcher_config,
-                            {"use_sim_time": LaunchConfiguration("use_sim_time")}],
+                parameters=[
+                    navyu_slam_config,
+                    {"use_sim_time": LaunchConfiguration("use_sim_time")},
+                ],
             ),
             Node(
                 condition=IfCondition(LaunchConfiguration("use_rviz")),
@@ -59,6 +53,6 @@ def generate_launch_description():
                 executable="rviz2",
                 name="rviz2",
                 arguments=["-d", rviz_config],
-            )
+            ),
         ]
     )

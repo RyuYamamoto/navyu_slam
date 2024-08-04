@@ -22,10 +22,15 @@ ament_auto_add_executable(scan_matcher_node
 ament_auto_add_executable(navyu_slam_node
   src/navyu_slam.cpp
   src/mapping/occupancy_grid_map.cpp
+  src/mapping/map_generator.cpp
 )
 
 include_directories(${CERES_INCLUDE_DIRS})
 target_link_libraries(scan_matcher_node
+  ${CERES_LIBRARIES}
+)
+
+target_link_libraries(navyu_slam_node
   ${CERES_LIBRARIES}
 )
 
