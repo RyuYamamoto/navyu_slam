@@ -26,6 +26,7 @@ MapGenerator::MapGenerator(rclcpp::Node * node)
   resolution_ = node_->declare_parameter<double>("map_generator.resolution");
   displacement_ = node_->declare_parameter<double>("map_generator.displacement");
   leaf_size_ = node_->declare_parameter<double>("map_generator.leaf_size");
+  random_sample_ = node_->declare_parameter<int>("map_generator.random_sample");
 
   node_->get_parameter<bool>("use_odom", use_odom_);
 
@@ -76,9 +77,9 @@ void MapGenerator::add_scan(const pcl::PointCloud<pcl::PointXYZ>::Ptr & scan)
     sub_map_.emplace_back(submap);
 
     const auto transformed_cloud = submap.get_scan();
-    ceres_scan_matcher_.set_target_cloud(transformed_cloud);
-
     update_bound(transformed_cloud);
+
+    ceres_scan_matcher_.set_target_cloud(transformed_cloud);
 
     previous_transformation_ = transformation_;
   }
@@ -123,5 +124,11 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr MapGenerator::preprocessing(
   voxel_grid.setInputCloud(cloud_in);
   voxel_grid.filter(*voxel_filtered_cloud);
 
-  return voxel_filtered_cloud;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr random_filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::RandomSample<pcl::PointXYZ> random_sample;
+  random_sample.setInputCloud(voxel_filtered_cloud);
+  random_sample.setSample(random_sample_);
+  random_sample.filter(*random_filtered_cloud);
+
+  return random_filtered_cloud;
 }

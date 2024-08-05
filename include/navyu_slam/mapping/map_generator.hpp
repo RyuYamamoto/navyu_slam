@@ -24,6 +24,7 @@
 
 #include <sensor_msgs/msg/laser_scan.hpp>
 
+#include <pcl/filters/random_sample.h>
 #include <pcl/filters/voxel_grid.h>
 
 class MapGenerator
@@ -71,6 +72,7 @@ private:
   double probability_occ_;
 
   double leaf_size_;
+  int random_sample_;
 };
 
 #endif

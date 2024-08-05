@@ -7,7 +7,8 @@ navyu_slam_node:
       probability_occ: 0.8
       probability_free: 0.2
       leaf_size: 0.05
+      random_sample: 150
       displacement: 0.1
       resolution: 0.05
     use_odom: true
-    map_publish_interval: 0.5
+    map_publish_interval: 1.0
