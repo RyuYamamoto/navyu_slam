@@ -18,7 +18,6 @@
 #include <Eigen/Core>
 #include <pcl_ros/transforms.hpp>
 
-#include <omp.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
