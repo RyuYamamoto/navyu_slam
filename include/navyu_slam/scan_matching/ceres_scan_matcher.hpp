@@ -121,8 +121,8 @@ public:
 
     double transform[3] = {0.0, 0.0, 0.0};
 
-    std::vector<float> dist(1);
-    std::vector<int> indices(1);
+    std::vector<float> dist(2);
+    std::vector<int> indices(2);
     ceres::Problem problem;
     for (int i = 0; i < input_cloud_->points.size(); i++) {
       pcl::PointXYZ transform_point;
