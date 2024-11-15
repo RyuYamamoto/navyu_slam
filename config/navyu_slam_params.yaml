@@ -8,7 +8,7 @@ navyu_slam_node:
       probability_free: 0.2
       leaf_size: 0.05
       random_sample: 150
-      displacement: 0.1
+      displacement: 0.3
       resolution: 0.05
-    use_odom: true
+    use_odom: false
     map_publish_interval: 1.0

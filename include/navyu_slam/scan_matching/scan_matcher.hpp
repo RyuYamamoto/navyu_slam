@@ -68,7 +68,7 @@ private:
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 
-  registration::Icp icp_;
+  registration::IterativeClosestPoint icp_;
   registration::CeresScanMatcher ceres_scan_matcher_;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr target_scan_;

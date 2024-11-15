@@ -19,6 +19,7 @@
 #include "navyu_slam/mapping/submap.hpp"
 #include "navyu_slam/scan_matching/ceres_scan_matcher.hpp"
 #include "navyu_slam/scan_matching/icp.hpp"
+#include "navyu_slam/scan_matching/ndt.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -49,7 +50,8 @@ private:
 private:
   rclcpp::Node * node_;
   registration::CeresScanMatcher ceres_scan_matcher_;
-  registration::Icp icp_scan_matcher_;
+  registration::IterativeClosestPoint icp_;
+  registration::NormalDistributionTransform ndt_;
 
   std::shared_ptr<OccupancyGridMap> grid_map_;
   std::vector<SubMap> sub_map_;

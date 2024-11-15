@@ -14,4 +14,10 @@ Eigen::Matrix4f convert_to_matrix(const geometry_msgs::msg::TransformStamped & t
   return matrix;
 }
 
+Eigen::Vector3f convert_to_euler(const Eigen::Matrix4f matrix)
+{
+  Eigen::Matrix3f rotation = matrix.block<3, 3>(0, 0);
+  return rotation.eulerAngles(0, 1, 2);
+}
+
 #endif

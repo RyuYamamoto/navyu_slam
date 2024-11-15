@@ -116,8 +116,6 @@ public:
     }
     transformation_ = initial_pose;
     const Eigen::Vector3d current_scan_position = transformation_.block<3, 1>(0, 3).cast<double>();
-    const Eigen::Quaterniond current_scan_quaternion(
-      transformation_.block<3, 3>(0, 0).cast<double>());
 
     double transform[3] = {0.0, 0.0, 0.0};
 

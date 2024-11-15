@@ -130,5 +130,5 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr MapGenerator::preprocessing(
   random_sample.setSample(random_sample_);
   random_sample.filter(*random_filtered_cloud);
 
-  return random_filtered_cloud;
+  return voxel_filtered_cloud;
 }

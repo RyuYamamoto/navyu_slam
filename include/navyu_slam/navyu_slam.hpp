@@ -68,9 +68,6 @@ private:
 
   std::shared_ptr<std::thread> map_publish_thread_;
 
-  registration::Icp icp_;
-  registration::CeresScanMatcher ceres_scan_matcher_;
-
   std::shared_ptr<MapGenerator> map_generator_;
 
   laser_geometry::LaserProjection projection_;

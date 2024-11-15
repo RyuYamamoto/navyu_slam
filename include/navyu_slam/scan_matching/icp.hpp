@@ -32,10 +32,10 @@ struct CorrespondenceData
   int target_index;
 };
 
-class Icp
+class IterativeClosestPoint
 {
 public:
-  Icp()
+  IterativeClosestPoint()
   {
     input_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
     target_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
@@ -45,7 +45,7 @@ public:
 
     epsilon_ = std::numeric_limits<float>::epsilon();
   }
-  ~Icp() = default;
+  ~IterativeClosestPoint() = default;
 
   void set_max_iteration(int max_iteration) { max_iteration_ = max_iteration; }
 

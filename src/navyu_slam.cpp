@@ -99,7 +99,10 @@ void NavyuSLAM::laser_scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr
   map_to_odom_pose_msg.orientation = tf2::toMsg(map_to_odom_quaternion);
 
   // publish tf
-  publish_tf(map_to_odom_pose_msg, current_stamp, map_frame_id_, odom_frame_id_);
+  if (use_odom_)
+    publish_tf(map_to_odom_pose_msg, current_stamp, map_frame_id_, odom_frame_id_);
+  else
+    publish_tf(map_to_odom_pose_msg, current_stamp, map_frame_id_, robot_frame_id_);
 }
 
 bool NavyuSLAM::get_odom_pose(Eigen::Matrix4f & odom)

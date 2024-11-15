@@ -39,6 +39,10 @@ public:
   void update(SubMap submap);
   void generate(std::vector<SubMap> submap);
   inline std::vector<int> get_map() { return map_value_; }
+  inline double get_probability(const int xi, const int yi)
+  {
+    return probability(map_value_[get_index(xi, yi)]);
+  }
   inline nav_msgs::msg::OccupancyGrid get_map_with_probability()
   {
     std::vector<int8_t> map_with_probability;
@@ -67,6 +71,12 @@ public:
     int mx = static_cast<int>((wx - origin_[0]) / resolution_);
     int my = static_cast<int>((wy - origin_[1]) / resolution_);
     return std::make_tuple(mx, my);
+  }
+  std::tuple<double, double> get_world_pose(const int mx, const int my)
+  {
+    double wx = resolution_ * mx + origin_[0];
+    double wy = resolution_ * my + origin_[1];
+    return std::make_tuple(wx, wy);
   }
   inline int get_index(int ix, int iy) { return width_ * iy + ix; }
 
