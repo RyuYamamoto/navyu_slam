@@ -74,7 +74,7 @@ public:
     int iteration = 1;
     while (true) {
       if (100 < iteration) break;
-      correspondences_ = find_correspoindence(input_cloud_, transformation_);
+      correspondences_ = find_correspondence(input_cloud_, transformation_);
       if (correspondences_.empty()) {
         std::cerr << "Can not find correspondence." << std::endl;
         return;
@@ -108,7 +108,7 @@ public:
     }
   }
 
-  std::vector<CorrespondenceData> find_correspoindence(
+  std::vector<CorrespondenceData> find_correspondence(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::Matrix4f pose)
   {
     std::vector<CorrespondenceData> correspondences;
@@ -116,7 +116,7 @@ public:
 
     std::vector<float> dist(1);
     std::vector<int> indices(1);
-    for (int i = 0; i < cloud->points.size(); i++) {
+    for (std::size_t i = 0; i < cloud->points.size(); i++) {
       pcl::PointXYZ transform_point;
       transform_point.getVector4fMap() = pose * cloud->points[i].getVector4fMap();
 

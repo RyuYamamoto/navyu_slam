@@ -115,14 +115,13 @@ public:
       return;
     }
     transformation_ = initial_pose;
-    const Eigen::Vector3d current_scan_position = transformation_.block<3, 1>(0, 3).cast<double>();
 
     double transform[3] = {0.0, 0.0, 0.0};
 
     std::vector<float> dist;
     std::vector<int> indices;
     ceres::Problem problem;
-    for (int i = 0; i < input_cloud_->points.size(); i++) {
+    for (std::size_t i = 0; i < input_cloud_->points.size(); i++) {
       pcl::PointXYZ transform_point;
       transform_point.getVector4fMap() = transformation_ * input_cloud_->points[i].getVector4fMap();
 
@@ -169,7 +168,6 @@ private:
   Eigen::Matrix4f transformation_;
 
   double epsilon_;
-  double correspondence_distance_{2.0};
 };
 
 }  // namespace registration

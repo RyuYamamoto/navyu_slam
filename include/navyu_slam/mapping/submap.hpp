@@ -29,8 +29,8 @@ using PointCloudPtr = pcl::PointCloud<pcl::PointXYZ>::Ptr;
 class SubMap
 {
 public:
-  SubMap(PointCloudPtr scan, Eigen::Matrix4f pose, const double accumulate_distance)
-  : scan_raw_(scan), pose_(pose), accumulate_distance_(accumulate_distance)
+  SubMap(PointCloudPtr scan, const Eigen::Matrix4f & pose, double accumulate_distance)
+  : pose_(pose), scan_raw_(scan), accumulate_distance_(accumulate_distance)
   {
     transform_scan_.reset(new PointCloud);
     transform_point_cloud(pose);
@@ -42,8 +42,8 @@ public:
     pcl::transformPointCloud(*scan_raw_, *transform_scan_, pose);
   }
 
-  PointCloudPtr get_scan() { return transform_scan_; }
-  Eigen::Vector3f get_origin() { return pose_.block<3, 1>(0, 3).cast<float>(); }
+  const PointCloudPtr & get_scan() const { return transform_scan_; }
+  Eigen::Vector3f get_origin() const { return pose_.block<3, 1>(0, 3).cast<float>(); }
 
 private:
   std_msgs::msg::Header header_;

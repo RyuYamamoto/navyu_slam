@@ -49,13 +49,13 @@ public:
 private:
   bool get_odom_pose(Eigen::Matrix4f & odom);
   bool get_transform(
-    const std::string target_frame, const std::string source_frame,
+    const std::string & target_frame, const std::string & source_frame,
     geometry_msgs::msg::TransformStamped & frame);
   bool get_transform(
-    const std::string target_frame, const std::string source_frame, Eigen::Matrix4f & matrix);
+    const std::string & target_frame, const std::string & source_frame, Eigen::Matrix4f & matrix);
   void publish_tf(
-    const geometry_msgs::msg::Pose pose, const rclcpp::Time stamp, const std::string frame_id,
-    const std::string child_frame_id);
+    const geometry_msgs::msg::Pose & pose, const rclcpp::Time & stamp, const std::string & frame_id,
+    const std::string & child_frame_id);
 
   void update_map();
 
@@ -66,15 +66,13 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr submap_publisher_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr estimated_path_publisher_;
 
-  std::shared_ptr<std::thread> map_publish_thread_;
-
-  std::shared_ptr<MapGenerator> map_generator_;
+  std::unique_ptr<MapGenerator> map_generator_;
 
   laser_geometry::LaserProjection projection_;
 
   tf2_ros::Buffer tf_buffer_{get_clock()};
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
-  std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 
   std::string map_frame_id_;
   std::string odom_frame_id_;

@@ -31,8 +31,8 @@ NavyuSLAM::NavyuSLAM() : Node("navyu_slam")
   use_odom_ = declare_parameter<bool>("use_odom");
   map_publish_interval_ = declare_parameter<double>("map_publish_interval");
 
-  map_generator_ = std::make_shared<MapGenerator>(this);
-  broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
+  map_generator_ = std::make_unique<MapGenerator>(this);
+  broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(this);
 
   map_update_thread_ = std::thread(&NavyuSLAM::update_map, this);
 }
@@ -119,7 +119,7 @@ bool NavyuSLAM::get_odom_pose(Eigen::Matrix4f & odom)
 }
 
 bool NavyuSLAM::get_transform(
-  const std::string target_frame, const std::string source_frame,
+  const std::string & target_frame, const std::string & source_frame,
   geometry_msgs::msg::TransformStamped & frame)
 {
   try {
@@ -133,7 +133,7 @@ bool NavyuSLAM::get_transform(
 }
 
 bool NavyuSLAM::get_transform(
-  const std::string target_frame, const std::string source_frame, Eigen::Matrix4f & matrix)
+  const std::string & target_frame, const std::string & source_frame, Eigen::Matrix4f & matrix)
 {
   geometry_msgs::msg::TransformStamped frame;
 
@@ -147,8 +147,8 @@ bool NavyuSLAM::get_transform(
 }
 
 void NavyuSLAM::publish_tf(
-  const geometry_msgs::msg::Pose pose, const rclcpp::Time stamp, const std::string frame_id,
-  const std::string child_frame_id)
+  const geometry_msgs::msg::Pose & pose, const rclcpp::Time & stamp, const std::string & frame_id,
+  const std::string & child_frame_id)
 {
   geometry_msgs::msg::TransformStamped transform_stamped;
   transform_stamped.header.frame_id = frame_id;

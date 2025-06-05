@@ -23,23 +23,20 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-namespace registration
-{
+namespace registration {
 
-class Voxel
-{
+class Voxel {
 public:
-  Voxel()
-  {
+  Voxel() {
     mean.setZero();
     covariance.setIdentity();
     num_points = 0;
   }
   ~Voxel() = default;
 
-  void update()
-  {
-    if (num_points == 0) return;
+  void update() {
+    if (num_points == 0)
+      return;
 
     const float size_per_voxel = static_cast<float>(num_points);
     mean /= size_per_voxel;
@@ -52,12 +49,11 @@ public:
   int num_points;
 };
 
-class NormalDistributionTransform
-{
+class NormalDistributionTransform {
 public:
   NormalDistributionTransform()
-  : resolution_(1.0), epsilon_(1e-05), max_iteration_(30), converged_(false)
-  {
+      : resolution_(1.0), epsilon_(1e-05), max_iteration_(30),
+        converged_(false) {
     source_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
     target_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -65,16 +61,18 @@ public:
   }
   ~NormalDistributionTransform() = default;
 
-  void set_maximum_iteration(const int max_iteration) { max_iteration_ = max_iteration; }
+  void set_maximum_iteration(const int max_iteration) {
+    max_iteration_ = max_iteration;
+  }
   void set_resolution(const double resolution) { resolution_ = resolution; }
   void set_epsilon(const double epsilon) { epsilon_ = epsilon; }
 
-  void set_input_cloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr & source_cloud)
-  {
+  void
+  set_input_cloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr &source_cloud) {
     source_cloud_ = source_cloud;
   }
-  void set_target_cloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr & target_cloud)
-  {
+  void
+  set_target_cloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr &target_cloud) {
     nd_cells_.clear();
 
     target_cloud_ = target_cloud;
@@ -87,7 +85,7 @@ public:
     origin_ = Eigen::Vector2f(min[0], min[1]);
 
     // create ND cell
-    for (auto & point : target_cloud_->points) {
+    for (auto &point : target_cloud_->points) {
       int ix = static_cast<int>((point.x - origin_[0]) / resolution_);
       int iy = static_cast<int>((point.y - origin_[1]) / resolution_);
 
@@ -99,11 +97,12 @@ public:
       nd_cells_[idx].num_points++;
     }
     // calculate mean and covariance
-    for (auto & cell : nd_cells_) {
-      if (cell.second.num_points == 0) continue;
+    for (auto &cell : nd_cells_) {
+      if (cell.second.num_points == 0)
+        continue;
 
       cell.second.mean /= cell.second.points.size();
-      for (auto & point : cell.second.points) {
+      for (auto &point : cell.second.points) {
         Eigen::Vector2f diff = point - cell.second.mean;
         cell.second.covariance += diff * diff.transpose();
       }
@@ -111,11 +110,11 @@ public:
     }
   }
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr get_downsample_points()
-  {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr downsample_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr get_downsample_points() {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr downsample_cloud(
+        new pcl::PointCloud<pcl::PointXYZ>);
 
-    for (auto & cell : nd_cells_) {
+    for (auto &cell : nd_cells_) {
       pcl::PointXYZ point;
       point.x = cell.second.mean.x();
       point.y = cell.second.mean.y();
@@ -124,8 +123,7 @@ public:
     return downsample_cloud;
   }
 
-  void align(const Eigen::Matrix4f & initial_pose)
-  {
+  void align(const Eigen::Matrix4f &initial_pose) {
     if (source_cloud_->points.empty()) {
       std::cerr << "source cloud is empty." << std::endl;
       return;
@@ -145,18 +143,20 @@ public:
     converged_ = false;
     Eigen::Vector3f lambda(Eigen::Vector3f(0.1, 0.1, 0.1));
     while (!converged_) {
-      if (max_iteration_ < iteration) break;
+      if (max_iteration_ < iteration)
+        break;
 
-      const Eigen::Vector3f current_position = transformation_.block<3, 1>(0, 3);
-      const double yaw = transformation_.block<3, 3>(0, 0).eulerAngles(0, 1, 2).z();
+      const double yaw =
+          transformation_.block<3, 3>(0, 0).eulerAngles(0, 1, 2).z();
       const double cos_theta = std::cos(yaw);
       const double sin_theta = std::sin(yaw);
 
       Eigen::Vector3f gradient(Eigen::Vector3f::Zero());
       Eigen::Matrix3f hessian(Eigen::Matrix3f::Zero());
-      for (auto & point : source_cloud_->points) {
+      for (const auto &point : source_cloud_->points) {
         pcl::PointXYZ transformed_cloud;
-        transformed_cloud.getVector4fMap() = transformation_ * point.getVector4fMap();
+        transformed_cloud.getVector4fMap() =
+            transformation_ * point.getVector4fMap();
 
         const float x = transformed_cloud.x;
         const float y = transformed_cloud.y;
@@ -165,16 +165,18 @@ public:
         int idx = cell_size_x_ * iy + ix;
 
         // if cell does not contain points, skip calculation.
-        if (nd_cells_[idx].num_points == 0) continue;
+        if (nd_cells_[idx].num_points == 0)
+          continue;
 
         Eigen::Matrix<float, 2, 3> jacobian;
         jacobian << 1.0, 0.0, -x * sin_theta - y * cos_theta, 0.0, 1.0,
-          x * cos_theta - y * sin_theta;
+            x * cos_theta - y * sin_theta;
 
         Eigen::Vector2f xy(x, y);
         Eigen::Vector2f q = xy - nd_cells_[idx].mean;
         Eigen::Matrix2f cov_inv = nd_cells_[idx].covariance.inverse();
-        Eigen::RowVector2f qt_cov_inv(q.transpose() * nd_cells_[idx].covariance.inverse());
+        Eigen::RowVector2f qt_cov_inv(q.transpose() *
+                                      nd_cells_[idx].covariance.inverse());
 
         // update gradient
         gradient += qt_cov_inv * jacobian * std::exp(-0.5 * qt_cov_inv * q);
@@ -184,23 +186,26 @@ public:
           for (int j = 0; j < 3; j++) {
             Eigen::Vector2f d2_q(Eigen::Vector2f::Zero());
             if (i == 2 && j == 2)
-              d2_q << y * sin_theta - x * cos_theta, -(x * sin_theta + y * cos_theta);
+              d2_q << y * sin_theta - x * cos_theta,
+                  -(x * sin_theta + y * cos_theta);
 
             hessian(i, j) +=
-              (-std::exp(-0.5 * qt_cov_inv * q) *
-               (static_cast<float>(-qt_cov_inv * jacobian.col(i)) *
-                  static_cast<float>(-qt_cov_inv * jacobian.col(j)) +
-                (-qt_cov_inv * d2_q) + (-jacobian.col(j).transpose() * cov_inv * jacobian.col(i))));
+                (-std::exp(-0.5 * qt_cov_inv * q) *
+                 (static_cast<float>(-qt_cov_inv * jacobian.col(i)) *
+                      static_cast<float>(-qt_cov_inv * jacobian.col(j)) +
+                  (-qt_cov_inv * d2_q) +
+                  (-jacobian.col(j).transpose() * cov_inv * jacobian.col(i))));
           }
         }
       }
 
-      Eigen::Vector3f delta_p = lambda.cwiseProduct(-hessian.inverse() * gradient);
+      Eigen::Vector3f delta_p =
+          lambda.cwiseProduct(-hessian.inverse() * gradient);
 
       Eigen::Matrix4f delta_matrix(Eigen::Matrix4f::Identity());
       Eigen::Matrix2f rotation;
-      rotation << std::cos(delta_p[2]), -std::sin(delta_p[2]), std::sin(delta_p[2]),
-        std::cos(delta_p[2]);
+      rotation << std::cos(delta_p[2]), -std::sin(delta_p[2]),
+          std::sin(delta_p[2]), std::cos(delta_p[2]);
 
       delta_matrix.block<2, 2>(0, 0) = rotation;
       delta_matrix(0, 3) = delta_p[0];
@@ -237,6 +242,6 @@ private:
   Eigen::Vector2f origin_;
   std::map<std::size_t, Voxel> nd_cells_;
 };
-}  // namespace registration
+} // namespace registration
 
 #endif
