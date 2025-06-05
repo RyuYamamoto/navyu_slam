@@ -19,19 +19,19 @@ OccupancyGridMap::OccupancyGridMap(
 : width_(100),
   height_(100),
   resolution_(resolution),
-  probability_occ_(probability_occ),
   probability_free_(probability_free),
+  probability_occ_(probability_occ),
   min_(std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
   max_(std::numeric_limits<float>::min(), std::numeric_limits<float>::min())
 {
   map_value_.resize(width_ * height_);
-  for (int i = 0; i < map_value_.size(); i++) map_value_[i] = log_odds(0.5);
+  for (std::size_t i = 0; i < map_value_.size(); i++) map_value_[i] = log_odds(0.5);
 }
 
-void OccupancyGridMap::update(SubMap submap)
+void OccupancyGridMap::update(const SubMap & submap)
 {
-  auto scan = submap.get_scan();
-  auto origin = submap.get_origin();
+  const auto scan = submap.get_scan();
+  const auto origin = submap.get_origin();
   // get map index from robot pose
   auto [sx, sy] = get_grid_map_coord(origin[0], origin[1]);
 
@@ -43,14 +43,14 @@ void OccupancyGridMap::update(SubMap submap)
     bresenham(sx, sy, hx, hy, cell);
 
     // free cell
-    for (int i = 0; i < cell.size(); i++)
+    for (std::size_t i = 0; i < cell.size(); i++)
       map_value_[get_index(cell[i][0], cell[i][1])] += log_odds(probability_free_);
 
     if (is_inside(hx, hy)) map_value_[get_index(hx, hy)] += log_odds(probability_occ_);
   }
 }
 
-void OccupancyGridMap::generate(std::vector<SubMap> submap)
+void OccupancyGridMap::generate(const std::vector<SubMap> & submap)
 {
   std::fill(map_value_.begin(), map_value_.end(), 0);
   for (auto map : submap) {

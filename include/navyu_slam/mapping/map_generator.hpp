@@ -53,7 +53,7 @@ private:
   registration::IterativeClosestPoint icp_;
   registration::NormalDistributionTransform ndt_;
 
-  std::shared_ptr<OccupancyGridMap> grid_map_;
+  std::unique_ptr<OccupancyGridMap> grid_map_;
   std::vector<SubMap> sub_map_;
 
   Eigen::Vector2f min_;

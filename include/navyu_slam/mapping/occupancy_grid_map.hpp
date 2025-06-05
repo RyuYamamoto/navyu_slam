@@ -33,11 +33,11 @@ public:
     width_ = width;
     height_ = height;
     map_value_.resize(width * height);
-    for (int i = 0; i < map_value_.size(); i++) map_value_[i] = log_odds(0.5);
+    for (std::size_t i = 0; i < map_value_.size(); i++) map_value_[i] = log_odds(0.5);
   }
 
-  void update(SubMap submap);
-  void generate(std::vector<SubMap> submap);
+  void update(const SubMap & submap);
+  void generate(const std::vector<SubMap> & submap);
   inline std::vector<int> get_map() { return map_value_; }
   inline double get_probability(const int xi, const int yi)
   {
@@ -48,7 +48,7 @@ public:
     std::vector<int8_t> map_with_probability;
     map_with_probability.resize(map_value_.size());
 
-    for (int i = 0; i < map_value_.size(); i++)
+    for (std::size_t i = 0; i < map_value_.size(); i++)
       map_with_probability[i] = probability(map_value_[i]) * 100.0;
 
     nav_msgs::msg::OccupancyGrid grid_map;
@@ -63,8 +63,7 @@ public:
   }
   inline bool is_inside(int mx, int my)
   {
-    bool ret = (0 <= mx and mx < width_) and (0 <= my and my < height_) ? true : false;
-    return ret;
+    return (0 <= mx and mx < width_) and (0 <= my and my < height_) ? true : false;
   }
   std::tuple<int, int> get_grid_map_coord(const double wx, const double wy)
   {

@@ -16,10 +16,10 @@
 
 MapGenerator::MapGenerator(rclcpp::Node * node)
 : node_(node),
-  transformation_(Eigen::Matrix4f::Identity()),
-  previous_transformation_(Eigen::Matrix4f::Identity()),
   min_(std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
-  max_(std::numeric_limits<float>::min(), std::numeric_limits<float>::min())
+  max_(std::numeric_limits<float>::min(), std::numeric_limits<float>::min()),
+  transformation_(Eigen::Matrix4f::Identity()),
+  previous_transformation_(Eigen::Matrix4f::Identity())
 {
   probability_free_ = node_->declare_parameter<double>("map_generator.probability_free");
   probability_occ_ = node_->declare_parameter<double>("map_generator.probability_occ");
@@ -30,7 +30,7 @@ MapGenerator::MapGenerator(rclcpp::Node * node)
 
   node_->get_parameter<bool>("use_odom", use_odom_);
 
-  grid_map_ = std::make_shared<OccupancyGridMap>(resolution_, probability_occ_, probability_free_);
+  grid_map_ = std::make_unique<OccupancyGridMap>(resolution_, probability_occ_, probability_free_);
 }
 
 void MapGenerator::add_odom(const Eigen::Matrix4f & odom)
